@@ -1,5 +1,4 @@
 Function Test-EmailAddress {
-
 <#
 	.SYNOPSIS
 		Function is intended to verify the correctness of addresses email in Microsoft Exchange Enviroment
@@ -9,10 +8,18 @@ Function Test-EmailAddress {
 		Checks perfomed: 
 		a) if email address contain wrong characters e.g. % or spaces
 		b) if email address is from domain which are on accepted domains list
-		c) if email address is currently assigned to any object in Exchange environment
-		As a result function returns true/false if a provided email address is correct/incorrect
+		c) if email address is currently assigned to any object in Exchange environment (a conflicted object exist)
+		As the result returned is PowerShell object which contain: EmailAddress, ExitCode, ExitDescription, ConflictedObjectAlias, ConflictedObjectType.
+		
+		Exit codes and descriptions:
+		0 - No Error
+		1 - Email doesn't contain 'at' char
+		2 - Email exist now
+		3 - Unsupported chars found
+		4 - Not accepted domain
 		
 	.PARAMETER EmailAddress
+		Email address which need to be verified in Exchange environment
 
 	.EXAMPLE
 		Test-EmailAddress -EmailAddress dummy@example.com
@@ -28,12 +35,15 @@ Function Test-EmailAddress {
 		VERSION HISTORY
 		0.1.0 - 2015-02-13 - first draft
 		0.2.0 - 2015-02-16 - first working version
-		0.2.1 - 2-15-02-17 - minor updates, first version published to GitHub
+		0.2.1 - 2-15-02-17 - minor updates, first version published on GitHub
+		0.3.0 - 2015-02-18 - exit codes added, result returned as PowerShell object
+		0.3.1 - 2015-02-18 - help updated, input parameater checks added
 		
 
 		TODO
 		- veryfing if Exchange cmdlets are available
 		- add parameters to disable some checks
+		- add support for veryfing emails from files directly 
 		
 
 		DISCLAIMER
@@ -49,9 +59,21 @@ Function Test-EmailAddress {
 param (
 
 	[parameter(mandatory=$true)]
+	[ValidateNotNullOrEmpty()]
+	[alias("email")]
 	[String]$EmailAddress
-	
+
 )
+
+BEGIN {
+
+	#Declare variable for store results data
+		
+	$Result = New-Object PSObject
+
+}
+
+PROCESS {
 
 	$AtPosition=$EmailAddress.IndexOf("@")
 	
@@ -61,7 +83,13 @@ param (
 	
 		Write-Verbose "Email address $EmailAddress is not correct"
 		
-		Return $false
+		$Result | Add-Member -type NoteProperty -Name EmailAddress -value $EmailAddress
+		$Result | Add-Member -type NoteProperty -Name ExitCode  -value 1
+		$Result | Add-Member -type NoteProperty -Name ExitDescription -value "Email doesn't contain 'at' char"
+		$Result | Add-Member -Type NoteProperty -Name ConflictedObjectAlias -value "Not checked"
+		$Result | Add-Member -Type NoteProperty -Name ConflictedObjectType -value "Not checked"
+				
+		Return $Result
 	}
 	Else { 
 	
@@ -75,6 +103,7 @@ param (
 		
 			Write-verbose -Message "Domain from $EmailAddress found in accepted domains."
 	
+			#This regex can not be sufficient for some domains like '.museum' or '.jobs' etc. 
 			$EmailRegex = '^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})$'
 			
 			If ( ([regex]::Match($EmailAddress, $EmailRegex, "IgnoreCase ")).Success ) {
@@ -85,7 +114,7 @@ param (
 				
 				Try {
 					
-					$Recipients = Get-Recipient $EmailAddress -ErrorAction Stop
+					$Recipient = Get-Recipient $EmailAddress -ErrorAction Stop
 					
 				}
 				
@@ -95,7 +124,13 @@ param (
 					
 					$NotError = $false
 					
-					Return $true
+					$Result | Add-Member -type NoteProperty -Name EmailAddress -value $EmailAddress
+					$Result | Add-Member -type NoteProperty -Name ExitCode  -value 0
+					$Result | Add-Member -type NoteProperty -Name ExitDescription -value "No Error"
+					$Result | Add-Member -Type NoteProperty -Name ConflictedObjectAlias -value "No conflict"
+					$Result | Add-Member -Type NoteProperty -Name ConflictedObjectType -value "Not checked"
+					
+					Return $Result
 				
 				}
 				
@@ -104,8 +139,14 @@ param (
 					If ( $NotError ) {
 					
 						Write-Verbose -Message "Recipient with email address $EmailAddress exist now."
+						
+						$Result | Add-Member -type NoteProperty -Name EmailAddress -value $EmailAddress
+						$Result | Add-Member -type NoteProperty -Name ExitCode  -value 2
+						$Result | Add-Member -type NoteProperty -Name ExitDescription -value "Email exist now"
+						$Result | Add-Member -Type NoteProperty -Name ConflictedObjectAlias -value $Recipient.alias
+						$Result | Add-Member -Type NoteProperty -Name ConflictedObjectType -value $Recipient.RecipientType
 				
-						Return $false
+						Return $Result
 						
 					}
 				
@@ -116,7 +157,13 @@ param (
 		
 				Write-Verbose -Message "Email address $EmailAddress contain unsupported chars"
 				
-				Return $false
+				$Result | Add-Member -type NoteProperty -Name EmailAddress -value $EmailAddress
+				$Result | Add-Member -type NoteProperty -Name ExitCode  -value 3
+				$Result | Add-Member -type NoteProperty -Name ExitDescription -value "Unsupported chars found"
+				$Result | Add-Member -Type NoteProperty -Name ConflictedObjectAlias -value "Not checked"
+				$Result | Add-Member -Type NoteProperty -Name ConflictedObjectType -value  "Not checked"
+				
+				Return $Result
 		
 			}
 		}
@@ -124,11 +171,25 @@ param (
 		Else {
 		
 			Write-Verbose "Email address $EmailAddress is not from accepted domains."
-		
-			Return $false
+			
+			$Result | Add-Member -type NoteProperty -Name EmailAddress -value $EmailAddress
+			$Result | Add-Member -type NoteProperty -Name ExitCode  -value 4
+			$Result | Add-Member -type NoteProperty -Name ExitDescription -value "Not accepted domain"
+			$Result | Add-Member -Type NoteProperty -Name ConflictedObjectAlias -value "Not checked"
+			$Result | Add-Member -Type NoteProperty -Name ConflictedObjectType -value  "Not checked"
+					
+			Return $Result
 
 		}
 
 	}
 	
+}
+
+END {
+	
+	#Nothing yet in this section
+
+}
+
 }
