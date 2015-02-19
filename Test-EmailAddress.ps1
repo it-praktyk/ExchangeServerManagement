@@ -38,20 +38,21 @@ Function Test-EmailAddress {
 		0.2.1 - 2-15-02-17 - minor updates, first version published on GitHub
 		0.3.0 - 2015-02-18 - exit codes added, result returned as PowerShell object
 		0.3.1 - 2015-02-18 - help updated, input parameater checks added
+		0.3.2 - 2015-02-19 - corrected for work with PowerShell 4.0 also (Windows Server 2012 R2)
 		
 
 		TODO
 		- veryfing if Exchange cmdlets are available
 		- add parameters to disable some checks
 		- add support for veryfing emails from files directly 
-		
+	
 
 		DISCLAIMER
-			This script is provided AS IS without warranty of any kind. I disclaim all implied warranties including, without limitation,
-			any implied warranties of merchantability or of fitness for a particular purpose. The entire risk arising out of the use or
-			performance of the sample scripts and documentation remains with you. In no event shall I be liable for any damages whatsoever
-			(including, without limitation, damages for loss of business profits, business interruption, loss of business information,
-			or other pecuniary loss) arising out of the use of or inability to use the script or documentation. 
+		This script is provided AS IS without warranty of any kind. I disclaim all implied warranties including, without limitation,
+		any implied warranties of merchantability or of fitness for a particular purpose. The entire risk arising out of the use or
+		performance of the sample scripts and documentation remains with you. In no event shall I be liable for any damages whatsoever
+		(including, without limitation, damages for loss of business profits, business interruption, loss of business information,
+		or other pecuniary loss) arising out of the use of or inability to use the script or documentation. 
 #>
 
 [cmdletbinding()]
@@ -134,24 +135,22 @@ PROCESS {
 				
 				}
 				
-				Finally {
+				
 	
-					If ( $NotError ) {
+				If ( $NotError ) {
 					
-						Write-Verbose -Message "Recipient with email address $EmailAddress exist now."
+					Write-Verbose -Message "Recipient with email address $EmailAddress exist now."
 						
-						$Result | Add-Member -type NoteProperty -Name EmailAddress -value $EmailAddress
-						$Result | Add-Member -type NoteProperty -Name ExitCode  -value 2
-						$Result | Add-Member -type NoteProperty -Name ExitDescription -value "Email exist now"
-						$Result | Add-Member -Type NoteProperty -Name ConflictedObjectAlias -value $Recipient.alias
-						$Result | Add-Member -Type NoteProperty -Name ConflictedObjectType -value $Recipient.RecipientType
+					$Result | Add-Member -type NoteProperty -Name EmailAddress -value $EmailAddress
+					$Result | Add-Member -type NoteProperty -Name ExitCode  -value 2
+					$Result | Add-Member -type NoteProperty -Name ExitDescription -value "Email exist now"
+					$Result | Add-Member -Type NoteProperty -Name ConflictedObjectAlias -value $Recipient.alias
+					$Result | Add-Member -Type NoteProperty -Name ConflictedObjectType -value $Recipient.RecipientType
 				
-						Return $Result
+					Return $Result
 						
-					}
-				
 				}
-				
+	
 			}
 			Else {
 		
