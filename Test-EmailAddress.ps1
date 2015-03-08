@@ -17,6 +17,7 @@ Function Test-EmailAddress {
 		2 - Email exist now
 		3 - Unsupported chars found
 		4 - Not accepted domain
+		5 - White chars e.g. spaces founded before/after email
 		
 	.PARAMETER EmailAddress
 		Email address which need to be verified in Exchange environment
@@ -26,12 +27,13 @@ Function Test-EmailAddress {
 	
 	.LINK
 		https://github.com/it-praktyk/Test-EmailAddress
+		
 	.LINK
 		https://www.linkedin.com/in/sciesinskiwojciech
+		
 	.NOTES
 		AUTHOR: Wojciech Sciesinski, wojciech[at]sciesinski[dot]net
 		KEYWORDS: Windows, PowerShell, Exchange Server, email
-		BASE REPOSITORY: https://github.com/it-praktyk/Test-EmailAddress
 		VERSION HISTORY
 		0.1.0 - 2015-02-13 - first draft
 		0.2.0 - 2015-02-16 - first working version
@@ -39,12 +41,16 @@ Function Test-EmailAddress {
 		0.3.0 - 2015-02-18 - exit codes added, result returned as PowerShell object
 		0.3.1 - 2015-02-18 - help updated, input parameater checks added
 		0.3.2 - 2015-02-19 - corrected for work with PowerShell 4.0 also (Windows Server 2012 R2)
+		0.3.3 - 2015-02-27 - ommited by mistake
+		0.3.4 - 2015-02-27 - regex for email parsing updated
+		0.3.5 - 2015-02-27 - chars like ' and # excluded from regex for parsing email address
+		0.4.0 - 2015-03-07 - verifying if function is runned in EMS added
+		0.5.0 - 2015-03-08 - verifying if email contains white chars (like a spaces) at the beginning or at the end added
 		
 
 		TODO
-		- veryfing if Exchange cmdlets are available
 		- add parameters to disable some checks
-		- add support for veryfing emails from files directly 
+		- add support for verifying emails from files directly 
 	
 
 		DISCLAIMER
@@ -77,12 +83,11 @@ BEGIN {
 PROCESS {
 
 	$AtPosition=$EmailAddress.IndexOf("@")
-	
-	$EmailAddressLenght = $EmailAddress.Length
+
 	
 	If ( $AtPosition -eq -1 ) {
 	
-		Write-Verbose "Email address $EmailAddress is not correct"
+		Write-Verbose "Email address $EmailAddress is not correct - at char is missed."
 		
 		$Result | Add-Member -type NoteProperty -Name EmailAddress -value $EmailAddress
 		$Result | Add-Member -type NoteProperty -Name ExitCode  -value 1
@@ -94,32 +99,64 @@ PROCESS {
 	}
 	Else { 
 	
+		#This try/catch block check if Exchange commands are available
+		Try {
+		
+			$AcceptedDomains = Get-AcceptedDomain 
+			
+		}
+		
+		Catch [System.Management.Automation.CommandNotFoundException] {
+		
+			Throw "This function need to be run using Exchange Management Shell."
+		
+		}
+	
 		Write-Verbose "Provided email address is $EmailAddress."
+		
+		If ( ($EmailAddress.Trim()).Length -ne $EmailAddress.Length ) {
+		
+			Write-Verbose -Message "Email address $EmailAddress contains white spaces at the beginning or at the end."
+				
+			$Result | Add-Member -type NoteProperty -Name EmailAddress -value $EmailAddress
+			$Result | Add-Member -type NoteProperty -Name ExitCode  -value 5
+			$Result | Add-Member -type NoteProperty -Name ExitDescription -value "White chars e.g. spaces founded before/after email"
+			$Result | Add-Member -Type NoteProperty -Name ConflictedObjectAlias -value "Not checked"
+			$Result | Add-Member -Type NoteProperty -Name ConflictedObjectType -value  "Not checked"
+				
+			Return $Result
+		
+		}
+			
+		$EmailAddressLenght = $EmailAddress.Length
 
 		$Domain = $EmailAddress.Substring($AtPosition+1, $EmailAddressLenght - ( $AtPosition +1 ))
 		
-		Write-Verbose "Email address is from domain $Domain"
+		Write-Verbose "Email address is from domain $Domain"	
 		
-		If ( (Get-AcceptedDomain | where { $_.domainname -eq $Domain } | measure).count -eq 1) {
+		If ( ($AcceptedDomains | where { $_.domainname -eq $Domain } | measure).count -eq 1) {
 		
 			Write-verbose -Message "Domain from $EmailAddress found in accepted domains."
-	
-			#This regex can not be sufficient for some domains like '.museum' or '.jobs' etc. 
-			$EmailRegex = '^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})$'
 			
-			If ( ([regex]::Match($EmailAddress, $EmailRegex, "IgnoreCase ")).Success ) {
+			$SpacePosition=$EmailAddress.IndexOf(" ")
+			
+			#Regex source http://www.regular-expressions.info/email.html
+			$EmailRegex = '[a-z0-9!#$%&''*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&''*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?'
+			
+			If ( ([regex]::Match($EmailAddress, $EmailRegex, "IgnoreCase ")).Success -and $SpacePosition -eq -1 ) {
 			
 				$NotError = $true
 			
 				Write-Verbose -Message "Email address  $EmailAddress  doesn't contain any unsupported chars"
+				
 				
 				Try {
 					
 					$Recipient = Get-Recipient $EmailAddress -ErrorAction Stop
 					
 				}
-				
-				Catch {
+								
+				Catch [System.Management.Automation.RemoteException] {
 					
 					Write-Verbose -Message "Email address doesn't exist in environment - finally result: is correct"
 					
@@ -134,8 +171,6 @@ PROCESS {
 					Return $Result
 				
 				}
-				
-				
 	
 				If ( $NotError ) {
 					
