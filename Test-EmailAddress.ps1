@@ -46,6 +46,7 @@ Function Test-EmailAddress {
 		0.3.5 - 2015-02-27 - chars like ' and # excluded from regex for parsing email address
 		0.4.0 - 2015-03-07 - verifying if function is runned in EMS added
 		0.5.0 - 2015-03-08 - verifying if email contains white chars (like a spaces) at the beginning or at the end added
+		0.5.1 - 2015-03-09 - compatibility issue on Exchange 2010 (PowerShell 2.0) resolved
 		
 
 		TODO
@@ -156,7 +157,7 @@ PROCESS {
 					
 				}
 								
-				Catch [System.Management.Automation.RemoteException] {
+				Catch  {
 					
 					Write-Verbose -Message "Email address doesn't exist in environment - finally result: is correct"
 					
