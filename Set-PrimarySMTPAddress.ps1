@@ -47,10 +47,12 @@ Function Set-PrimarySMTPAddress {
 
     VERSION HISTORY
     0.1.0 - Initial release - untested !
+	0.2.0 - Tested, corrected
     
          
     TO DO
     The structure for input files need to be parsed.
+	Add checking if mailbox/recipient has enabled 'useemailaddresspolicy'
     
     .EXAMPLE
 
@@ -122,7 +124,7 @@ BEGIN {
 
                 $RecipientsFromInputFile = Import-CSV -Path $InputFilePath -Delimiter ";" -ErrorAction Stop
                 
-                [Int]$RecipientsCount = $( $Mailboxes | Measure-Object).count
+                [Int]$RecipientsCount = $( $RecipientsFromInputFile | Measure-Object).count
             
             }                
             catch {
@@ -182,10 +184,14 @@ PROCESS {
             Try {
                         
                 $CurrentRecipientTest1 = $(Get-Recipient $_.RecipientIdentity -ErrorAction Stop | Where { $_.RecipientType -eq $RecipientType })
-                
+
+		Write-Debug "First test for recipient result: $CurrentRecipientTest1"
+               
                 $CurrentRecipientTest2 = $(Get-Recipient $_.NewPrimarySMTPAddress -ErrorAction Stop | Where { $_.RecipientType -eq $RecipientType })
-                
-                if ( $CurrentRecipientTest1 -ne $CurrentRecipientTest2 ) {
+
+		Write-Debug "Second test for recipient result: $CurrentRecipientTest2"
+               
+                if ( $CurrentRecipientTest1.Guid -ne $CurrentRecipientTest2.Guid ) {
                 
                     Write-Error -Message "Email address $_.NewPrimarySMTPAddress is not currently assigned to recipient $_.RecipientIdentity with type $_.RecipientType"
                     
@@ -195,7 +201,7 @@ PROCESS {
                 Else {
                 
                     $CurrentRecipient = $CurrentRecipientTest1
-                
+               
                 }
                 
             }
@@ -222,9 +228,9 @@ PROCESS {
 
                     $Result = New-Object PSObject
                     
-                    $Result | Add-Member -MemberType NoteProperty -Name RecipientIdentity -Value $CurrentRecipient.RecipientIdentity
+                    $Result | Add-Member -MemberType NoteProperty -Name RecipientIdentity -Value $_.RecipientIdentity
                     
-                    $Result | Add-Member -MemberType NoteProperty -name RecipientType -value $CurrentRecipient.RecipientType
+                    $Result | Add-Member -MemberType NoteProperty -name RecipientType -value $_.RecipientType
                     
                     $Result | Add-Member -MemberType NoteProperty -Name RecipientGuid -Value $CurrentMailbox.Guid
                     
@@ -236,7 +242,7 @@ PROCESS {
                         
                     $Result | Add-Member -MemberType NoteProperty -name ProxyAddressesBefore -value $AllProxyAddressesStringBefore
                     
-                    $Result | Add-Member -MemberType NoteProperty -Name PrimarySMTPAddressProposal -Value $CurrentRecipient.NewPrimarySMTPAddress
+                    $Result | Add-Member -MemberType NoteProperty -Name PrimarySMTPAddressProposal -Value $_.NewPrimarySMTPAddress
                         
                     #[String]$ProxyAddressStringToAdd = "{0}{1}" -f $Prefix, $_.proxyAddresses
                         
@@ -246,17 +252,17 @@ PROCESS {
                     
                     If ( $Mode -eq 'DisplayOnly' ) {
                     
-                        $Result | Add-Member -MemberTypeName NoteProperty -Name PrimarySMTPAddressProposal -Value $CurrentRecipient.NewPrimarySMTPAddress
+                        $Result | Add-Member -MemberType NoteProperty -Name PrimarySMTPAddresAfter -Value $CurrentMailbox.PrimarySMTPAddress
 
-                        $Result | Add-Member -MemberType NoteProperty -name ProxyAddressesProposal -value $AllProxyAddressesStringBefore #This need to be changed - replace for 
+                        $Result | Add-Member -MemberType NoteProperty -name ProxyAddressesAfter -value $AllProxyAddressesStringBefore #This need to be changed - replace for 
                             
                     }
                     
                     Elseif ( $Mode -eq 'PerformActions') {
                             
-                        Set-Mailbox -Identity $CurrentMailbox -PrimarySMTPAddress $CurrentRecipient.NewPrimarySMTPAddress -ErrorAction Continue
+                        Set-Mailbox -Identity $CurrentMailbox -PrimarySMTPAddress $_.NewPrimarySMTPAddress -ErrorAction Continue
                             
-                        $CurrentMailboxAfter = Get-Mailbox -Identity $($CurrentRecipient.Alias)
+                        $CurrentMailboxAfter = Get-Mailbox $CurrentMailbox
                         
                         $Result | Add-Member -MemberType NoteProperty -Name PrimarySMTPAddressAfter -Value $CurrentMailboxAfter.PrimarySMTPAddress
                                                 
