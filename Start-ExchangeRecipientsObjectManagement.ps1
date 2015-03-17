@@ -22,6 +22,14 @@ Function Start-ExchangeRecipientsObjectManagement {
 	- CreatePerformActionsCommandsOnly
 	- Rollback
 	- CreateRollbackCommnadsOnly
+	
+	.PARAMETER Operation
+	Operation which need to performed on maibox.
+	
+	Available operations
+	- AddProxyAddress 
+	- RemoveProxyAddress
+	- SetSMTPPrimaryAddress
 
     .PARAMETER DomainName
     Active Directory domain name - FQDN
@@ -53,6 +61,7 @@ Function Start-ExchangeRecipientsObjectManagement {
 
     VERSION HISTORY
     0.1.0 - Initial release - untested !
+	0.1.1 - Parameter Operations added, help updated, default values for some parameters removed
 
 	
 	LICENSE
@@ -91,18 +100,22 @@ param (
     [Bool]$VerifyInputFileForDuplicates=$true,
 
     [parameter(Mandatory=$false)]
-    [ValidateSet("DisplayOnly","PerformActions", "CreatePerformActionsCommandsOnly", "Rollback", "CreateRollbackCommnadsOnly" )]
+    [ValidateSet("DisplayOnly", "PerformActions", "CreatePerformActionsCommandsOnly", "Rollback", "CreateRollbackCommnadsOnly" )]
     [String]$Mode="DisplayOnly",
+
+	[parameter(Mandatory=$true)]
+	[ValidateSet("AddProxyAddress","RemoveProxyAddress","SetSMTPPrimaryAddress")]
+	[String]$Operation,
     
     [parameter(Mandatory=$false)]
     [ValidateSet("UserMailbox","MailNonUniversalGroup","MailUniversalDistributionGroup")]
-    [String]$RecipientType="UserMailbox",
+    [String]$RecipientType,
 	
 	[parameter(Mandatory=$false)]
 	[String]$DomainName,
     
     [parameter(mandatory=$false)]
-    [String]$Prefix="smtp:",
+    [String]$Prefix,
     
     [parameter(Mandatory=$false)]
     [Bool]$CreateRollbackFile=$true,
