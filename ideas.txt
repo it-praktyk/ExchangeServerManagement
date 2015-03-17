@@ -8,22 +8,33 @@ Input file Structure
 - NewProxyAddress
 - RemoveProxyAddressPrefix
 - RemoveProxyAddress
-- NewDisplayName - Active Directory o Exchange ?
+- NewDisplayName - Active Directory or Exchange ?
 
 Modes
-- DisplayOnly - default
+- DisplayOnly
 - PerformActions
 - PerformActionsCommandsOnly
 - Rollback
 - RollbackCommandsOnly
 
+
+Available operations
+- AddProxyAddress 
+- RemoveProxyAddress
+- SetSMTPPrimaryAddress
+
 SubOperations
 - start transcript
-- load ActiveDirectory
+- load ActiveDirectory module
 - verify if Exchange module is loaded
 - import csv data and verify csv data structure
 - find and verify recipient type
 - verify email addresses
+
+Operations
+
+
+
 
 Operation order
 - RemoveProxyAddress
@@ -37,9 +48,16 @@ Operation order
 Output/Rollback file Structure
 - RecipientIdentity
 - RecipientGUID
+- RecipientAlias
 - RecipientType - UserMailbox,
-- RecipientSkipped - true/false or codes
-- RecipientSkipped - Reason description 
+- RecipientWasSkipped - true/false or codes
+- RecipientSkipReason - Reason description 
+- PrimarySMTPAddressBefore
+- PrimarySMTPAddressAfter
+- ProxyAddressesBefore
+- ProxyAddressesProposal
+- ProxyAddressesAfter
+
 
 Partially output to different logs files - separate log file for errors
 
