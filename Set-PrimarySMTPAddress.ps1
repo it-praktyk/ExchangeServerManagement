@@ -13,24 +13,24 @@ Function Set-PrimarySMTPAddress {
     
     .PARAMETER VerifyInputFileForDuplicates
     By default input file is verified for duplicates
-	
-	.PARAMETER Operation
-	Operation which need to performed on maibox.
-	
-	Available operations
-	- AddProxyAddress 
-	- RemoveProxyAddress
-	- SetSMTPPrimaryAddress
-    
+
     .PARAMETER Mode
     The switch which define action to perform - default mode is DisplayOnly
-	
-	Available modes
-	- DisplayOnly
-	- PerformActions
-	- CreatePerformActionsCommandsOnly
-	- Rollback
-	- CreateRollbackCommnadsOnly
+
+    Available modes
+    - DisplayOnly
+    - PerformActions
+    - CreatePerformActionsCommandsOnly
+    - Rollback
+    - CreateRollbackCommnadsOnly
+    
+    .PARAMETER Operation
+    Operation which need to performed on maibox.
+    
+    Available operations
+    - AddProxyAddress 
+    - RemoveProxyAddress
+    - SetSMTPPrimaryAddress
 
     .PARAMETER FQDNDomainName
     Active Directory domain name - FQDN
@@ -62,27 +62,28 @@ Function Set-PrimarySMTPAddress {
 
     VERSION HISTORY
     0.1.0 - 2015-03-12 - Initial release - untested !
-	0.2.0 - 2015-03-13 - Tested, corrected
-	0.2.1 - 2015-03-14 - Info about license added - GNU GPLv3
-	0.3.0 - 2015-03-15 - Mode set extended, Operation parameter added
-	
-	LICENSE
-	Copyright (C) 2015 Wojciech Sciesinski
-	This program is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-	GNU General Public License for more details.
-	You should have received a copy of the GNU General Public License
-	along with this program. If not, see <http://www.gnu.org/licenses/>
+    0.2.0 - 2015-03-13 - Tested, corrected
+    0.2.1 - 2015-03-14 - Info about license added - GNU GPLv3
+    0.3.0 - 2015-03-15 - Mode set extended, Operation parameter added
+    0.4.0 - 2015-03-17 - Operations partially implemented
+    
+    LICENSE
+    Copyright (C) 2015 Wojciech Sciesinski
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+    GNU General Public License for more details.
+    You should have received a copy of the GNU General Public License
+    along with this program. If not, see <http://www.gnu.org/licenses/>
     
          
     TO DO
-	Add checking if mailbox/recipient has enabled 'useemailaddresspolicy'
-	Skipping for objects need to be implemented
+    Add checking if mailbox/recipient has enabled 'useemailaddresspolicy'
+    Skipping for objects need to be implemented
     
    
     
@@ -97,15 +98,20 @@ param (
     
     [parameter(Mandatory=$false)]
     [Bool]$VerifyInputFileForDuplicates=$true,
-	
-	[parameter(Mandatory=$true)]
-	[ValidateSet("AddProxyAddress","RemoveProxyAddress","SetSMTPPrimaryAddress")]
-	[String]$Operation,
 
-    [parameter(Mandatory=$false)]
-    [ValidateSet("DisplayOnly", "PerformActions", "CreatePerformActionsCommandsOnly", "Rollback", "CreateRollbackCommnadsOnly" )]
-    [String]$Mode="DisplayOnly",
+
     
+    [parameter(Mandatory=$true, `
+     HelpMessage="Available modes: DisplayOnly, PerformActions, CreatePerformActionsCommandsOnly, Rollback, CreateRollbackCommnadsOnly")]
+    [ValidateSet("DisplayOnly", "PerformActions", "CreatePerformActionsCommandsOnly", "Rollback", "CreateRollbackCommnadsOnly" )]
+    [String]$Mode,
+
+    
+    [parameter(Mandatory=$true)]
+    [ValidateSet("AddProxyAddress","RemoveProxyAddress","SetSMTPPrimaryAddress")]
+    [String]$Operation,
+
+
     [parameter(Mandatory=$false)]
     [ValidateSet("UserMailbox","MailNonUniversalGroup","MailUniversalDistributionGroup")]
     [String]$RecipientType="UserMailbox",
@@ -193,47 +199,50 @@ BEGIN {
     $Results=@()
     
     [int]$i=1
+    
+    [Array]$AcceptedRecipientTypes = @("UserMailbox")
 
 }
 
 PROCESS {
 
-        $RecipientsFromInputFile | ForEach { 
+    $RecipientsFromInputFile | ForEach { 
         
-        
-            $PercentCompleted = [math]::Round(($i / $RecipientsCount) * 100)
+        $PercentCompleted = [math]::Round(($i / $RecipientsCount) * 100)
 
-            $StatusText = "Percent completed $PercentCompleted%, currently the mailbox {0} is checked. " -f $($_.RecipientIdentity).ToString()
+        $StatusText = "Percent completed $PercentCompleted%, currently the mailbox {0} is checked. " -f $($_.RecipientIdentity).ToString()
 
-            Write-Progress -Activity "Performing action in mode $Mode" -Status $StatusText -PercentComplete $PercentCompleted
+        Write-Progress -Activity "Performing action in mode $Mode" -Status $StatusText -PercentComplete $PercentCompleted
         
-            [String]$MessageText="Performing check on object {0}  in mode: {1} ." -f $_.RecipientIdentity , $Mode
+        [String]$MessageText="Performing check on object {0}  in mode: {1} ." -f $_.RecipientIdentity , $Mode
         
-            Write-Verbose -Message $MessageText
+        Write-Verbose -Message $MessageText
             
+        If (  @("RemoveProxyAddress","SetSMTPPrimaryAddress") -contains $Operation ) { 
+        
             Try {
                         
                 $CurrentRecipientTest1 = $(Get-Recipient $_.RecipientIdentity -ErrorAction Stop | Where { $_.RecipientType -eq $RecipientType })
 
-				Write-Debug "First test for recipient result: $CurrentRecipientTest1"
+                Write-Debug "First test for recipient result: $CurrentRecipientTest1"
                
                 $CurrentRecipientTest2 = $(Get-Recipient $_.NewPrimarySMTPAddress -ErrorAction Stop | Where { $_.RecipientType -eq $RecipientType })
 
-				Write-Debug "Second test for recipient result: $CurrentRecipientTest2"
-               
-                if ( $CurrentRecipientTest1.Guid -ne $CurrentRecipientTest2.Guid ) {
+                Write-Debug "Second test for recipient result: $CurrentRecipientTest2"
+                   
+                If( $CurrentRecipientTest1.Guid -ne $CurrentRecipientTest2.Guid ) {
                 
                     Write-Error -Message "Email address $_.NewPrimarySMTPAddress is not currently assigned to recipient $_.RecipientIdentity with type $_.RecipientType"
-                    
+        
                     Break
-                
                 }
+                
                 Else {
                 
                     $CurrentRecipient = $CurrentRecipientTest1
-               
+            
                 }
-                
+             
             }
             
             Catch {
@@ -243,153 +252,146 @@ PROCESS {
                 Break
             
             }
-            
-            Finally {
-
-                $iserror = $false
-            
-                If ( $CurrentRecipient.RecipientType -eq 'UserMailbox' ) {
                 
-                    $CurrentMailbox = Get-Mailbox -Identity $($CurrentRecipient.Alias)
-    
-                    Write-Verbose -Message "Performing action on $CurrentMailbox.Alias in mode $Mode ."
-                    
-                    #Object properties before any changes
-
-                    $Result = New-Object PSObject
-                    
-                    $Result | Add-Member -MemberType NoteProperty -Name RecipientIdentity -Value $_.RecipientIdentity
-                    
-                    $Result | Add-Member -MemberType NoteProperty -name RecipientType -value $_.RecipientType
-                    
-                    $Result | Add-Member -MemberType NoteProperty -Name RecipientGuid -Value $CurrentMailbox.Guid
-                    
-                    $Result | Add-Member -MemberType NoteProperty -name RecipientAlias  -value $CurrentMailbox.Alias
-                    
-                    $Result | Add-Member -MemberType NoteProperty -Name PrimarySMTPAddressBefore -Value $CurrentMailbox.PrimarySMTPAddress
+        }
+        Elseif ( @("AddProxyAddress") -contains $Operation ) {
+            
+            Try {
                         
-                    $AllProxyAddressesStringBefore = ( @(select-Object -InputObject $CurrentMailbox -expandproperty emailaddresses) -join ',')
-                        
-                    $Result | Add-Member -MemberType NoteProperty -name ProxyAddressesBefore -value $AllProxyAddressesStringBefore
-                    
-                    $Result | Add-Member -MemberType NoteProperty -Name PrimarySMTPAddressProposal -Value $_.NewPrimarySMTPAddress
-                        
-                    #[String]$ProxyAddressStringToAdd = "{0}{1}" -f $Prefix, $_.proxyAddresses
-                        
-                    #[String]$ProxyAddressStringProposal = "{0},{1}" -f $AllProxyAddressesStringBefore,$ProxyAddressStringToAdd
-                        
-                    #$Result | Add-Member -MemberType NoteProperty -name ProxyAddressesProposal -value $ProxyAddressStringProposal
-                    
-                    If ( $Mode -eq 'DisplayOnly' ) {
-                    
-                        $Result | Add-Member -MemberType NoteProperty -Name PrimarySMTPAddresAfter -Value $CurrentMailbox.PrimarySMTPAddress
-
-                        $Result | Add-Member -MemberType NoteProperty -name ProxyAddressesAfter -value $AllProxyAddressesStringBefore #This need to be changed - replace for 
-                            
+                $CurrentRecipient = $(Get-Recipient $_.Name -ErrorAction Stop | Where { $_.RecipientType -eq $RecipientType })
+                
+                $EmailTestResult = Test-EmailAddress -EmailAddress $_.ProxyAddresses
+        
+                If ( $EmailTestResult.ExitCode -ne 0 ) {
+        
+                        Write-Error "Email address $_.ProxyAddresses is not correct - Error code: $EmailTestResult.ErrorCode `
+                        , Error description: $EmailTestResult.ErrorDescription, Conflicted object: $EmailTestResult.ConflictedObject ."
+            
                     }
-                    
-                    Elseif ( $Mode -eq 'PerformActions') {
-                            
-                        Set-Mailbox -Identity $CurrentMailbox -PrimarySMTPAddress $_.NewPrimarySMTPAddress -ErrorAction Continue
-                            
-                        $CurrentMailboxAfter = Get-Mailbox $CurrentMailbox
-                        
-                        $Result | Add-Member -MemberType NoteProperty -Name PrimarySMTPAddressAfter -Value $CurrentMailboxAfter.PrimarySMTPAddress
-                                                
-                        $AllProxyAddressesStringAfter = ( @(select-Object -InputObject $CurrentMailboxAfter -ExpandProperty emailaddresses) -join ',')
-                        
-                        $Result | Add-Member -MemberType NoteProperty -name ProxyAddressesAfter -value $AllProxyAddressesStringAfter
-                                                
-                    }
-                        
-                    ElseIf ( $Mode -eq 'Rollback' ) {
-    
-                        Write-Error -Message "Rollback mode is not implemented yet"
-    
-                    }
-                        
-                    $Results+=$Result
-                    
-                    $i+=1
                 
                 }
-                
-                <#
-ElseIf ( $CurrentRecipient.RecipientType -eq 'MailNonUniversalGroup' -or $CurrentRecipient.RecipientType -eq 'MailUniversalDistributionGroup' ) {
-                
-                    $CurrentGroup = Get-DistributionGroup -Identity $($CurrentRecipient.Alias)
-                    
-                    Write-Verbose -Message "Performing action on $CurrentGroup.Alias in mode $Mode ."
-                    
-                    #Object properties before any changes
-
-                    $Result = New-Object PSObject
-
-                    $Result | Add-Member -MemberType NoteProperty -name MailboxAlias  -value $CurrentGroup.Alias
-                    
-                    $Result | Add-Member -MemberType NoteProperty -name RecipientType -value $CurrentRecipient.RecipientType
-                        
-                    $AllProxyAddressesStringBefore = ( @(select-Object -InputObject $CurrentGroup -expandproperty emailaddresses) -join ',')
-                        
-                    $Result | Add-Member -MemberType NoteProperty -name ProxyAddressesBefore -value $AllProxyAddressesStringBefore
-                        
-                    [String]$ProxyAddressStringToAdd = "{0}{1}" -f $Prefix, $_.proxyAddresses
-                        
-                    [String]$ProxyAddressStringProposal = "{0},{1}" -f $AllProxyAddressesStringBefore,$ProxyAddressStringToAdd
-                        
-                    $Result | Add-Member -MemberType NoteProperty -name ProxyAddressesProposal -value $ProxyAddressStringProposal
-                    
-                    If ( $Mode -eq 'DisplayOnly' ) {
-
-                        $Result | Add-Member -MemberType NoteProperty -name ProxyAddressesAfter -value $AllProxyAddressesStringBefore
-                            
-                    }
-                    
-                    Elseif ( $Mode -eq 'PerformActions') {
-                            
-                        Set-DistributionGroup -Identity $CurrentGroup -EmailAddresses @{add=($ProxyAddressStringToAdd)} -ErrorAction Continue
-                            
-                        $CurrentMailboxAfter = Get-DistributionGroup -Identity $($CurrentRecipient.Alias)
-                                                
-                        $AllProxyAddressesStringAfter = ( @(select-Object -InputObject $CurrentMailboxAfter -ExpandProperty emailaddresses) -join ',')
-                        
-                        $Result | Add-Member -MemberType NoteProperty -name ProxyAddressesAfter -value $AllProxyAddressesStringAfter
-                                                
-                    }
-                        
-                    ElseIf ( $Mode -eq 'Rollback' ) {
-    
-                        Write-Error -Message "Rollback mode is not implemented yet"
-    
-                    }
-                        
-                    $Results+=$Result
-                    
-                    $i+=1
-                
-                }
-#>
-
-                
-                Else {
-                
-                    Write-Error -Message "Currently only recipients with RecipientType: UserMailbox, MailNonUniversalGroup, MailUniversalDistributionGroup are support by script `n '
-                    Current object RecipientType is $CurrentRecipient.RecipientType.ToString()"
-                    
-                    $IsError = $true
-                
-                }
-
-            }
             
-            If ($IsError) {
-                    
+            Catch {
+            
+                Write-Error "Mailbox $_.Name doesn't exist"
+                
                 Break
-                        
+            
             }
-    
-    }
+                
+            
+        }
+            
+        if ( $AcceptedRecipientTypes -notcontains $CurrentRecipientTest1.Recipienttype) {
+                    
+            Write-Error -Message "This function can only process recipients with type UserMailbox - for Recipient $_.RecipientIdentity type is $_.RecipientIdentity"
+                        
+            Break
+        
+        }
 
+
+        $CurrentMailbox = Get-Mailbox -Identity $($CurrentRecipient.Alias)
+    
+        Write-Verbose -Message "Performing action on $CurrentMailbox.Alias in mode $Mode ."
+                    
+        #Object properties before any changes - common part of Result objects
+
+        $Result = New-Object PSObject
+                    
+        $Result | Add-Member -MemberType NoteProperty -Name RecipientIdentity -Value $_.RecipientIdentity
+                    
+        $Result | Add-Member -MemberType NoteProperty -name RecipientType -value $_.RecipientType
+                    
+        $Result | Add-Member -MemberType NoteProperty -Name RecipientGuid -Value $CurrentMailbox.Guid
+                    
+        $Result | Add-Member -MemberType NoteProperty -name RecipientAlias  -value $CurrentMailbox.Alias
+                    
+        $Result | Add-Member -MemberType NoteProperty -Name PrimarySMTPAddressBefore -Value $CurrentMailbox.PrimarySMTPAddress
+
+        $AllProxyAddressesStringBefore = ( @(select-Object -InputObject $CurrentMailbox -expandproperty emailaddresses) -join ',')
+                        
+        $Result | Add-Member -MemberType NoteProperty -name ProxyAddressesBefore -value $AllProxyAddressesStringBefore
+                    
+        if ( $Operation -eq 'AddProxyAddress' ) {
+                    
+            If ( $Mode -eq 'DisplayOnly' ) {
+                        
+                [String]$ProxyAddressStringToAdd = "{0}{1}" -f $Prefix, $_.NewProxyAddress
+                        
+                [String]$ProxyAddressStringProposal = "{0},{1}" -f $AllProxyAddressesStringBefore,$ProxyAddressStringToAdd
+                        
+                $Result | Add-Member -MemberType NoteProperty -name ProxyAddressesProposal -value $ProxyAddressStringProposal
+
+                $Result | Add-Member -type NoteProperty -name ProxyAddressesAfter -value $AllProxyAddressesStringBefore
+                            
+            }        
+                    
+            Elseif ( $Mode -eq 'PerformActions') {
+                            
+                Set-Mailbox -Identity $CurrentMailbox -EmailAddresses @{add=($ProxyAddressStringToAdd)} -ErrorAction Continue
+                            
+                $CurrentMailboxAfter = Get-Mailbox -Identity $($CurrentRecipient.Alias)
+                                                
+                $AllProxyAddressesStringAfter = ( @(select-Object -InputObject $CurrentMailboxAfter -ExpandProperty emailaddresses) -join ',')
+                        
+                $Result | Add-Member -type NoteProperty -name ProxyAddressesAfter -value $AllProxyAddressesStringAfter
+                                                
+            }
+                        
+            ElseIf ( $Mode -eq 'Rollback' ) {
+    
+                Write-Error -Message "Rollback mode is not implemented yet"
+    
+            }
+                    
+        }
+                                        
+        elseif ( $Operation -eq 'SetSMTPPrimaryAddress' ) {
+                    
+            $Result | Add-Member -MemberType NoteProperty -Name PrimarySMTPAddressProposal -Value $_.NewPrimarySMTPAddress
+                        
+            If ( $Mode -eq 'DisplayOnly' ) {
+                    
+                $Result | Add-Member -MemberType NoteProperty -Name PrimarySMTPAddresAfter -Value $CurrentMailbox.PrimarySMTPAddress
+
+                $Result | Add-Member -MemberType NoteProperty -name ProxyAddressesAfter -value $AllProxyAddressesStringBefore #This need to be changed - replace for 
+                            
+            }
+                    
+            Elseif ( $Mode -eq 'PerformActions') {
+                            
+                Set-Mailbox -Identity $CurrentMailbox -PrimarySMTPAddress $_.NewPrimarySMTPAddress -ErrorAction Continue
+                            
+                $CurrentMailboxAfter = Get-Mailbox $CurrentMailbox
+                        
+                $Result | Add-Member -MemberType NoteProperty -Name PrimarySMTPAddressAfter -Value $CurrentMailboxAfter.PrimarySMTPAddress
+                                                
+                $AllProxyAddressesStringAfter = ( @(select-Object -InputObject $CurrentMailboxAfter -ExpandProperty emailaddresses) -join ',')
+                        
+                $Result | Add-Member -MemberType NoteProperty -name ProxyAddressesAfter -value $AllProxyAddressesStringAfter
+                                                
+            }
+                        
+            ElseIf ( $Mode -eq 'Rollback' ) {
+    
+                Write-Error -Message "Rollback mode is not implemented yet"
+    
+            }
+                    
+        }
+                    
+        elseif ( $Operation -eq 'RemoveProxyAddress' ) {
+                    
+            
+        }
+                                                                
+        $Results+=$Result
+                    
+        $i+=1
+
+    }
+    
 }
 
 
