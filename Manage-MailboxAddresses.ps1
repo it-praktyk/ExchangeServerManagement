@@ -2,10 +2,10 @@ Function Manage-MailboxAddresses {
 
 <#   
     .SYNOPSIS   
-    Function inteded to manage addresses for mailboxes in Exchange environment
+    Function intended to manage addresses for mailboxes in Exchange environment
   
     .DESCRIPTION   
-    Function inteded to manage addresses for mailboxes in Exchange Server environment based on input from csv file.
+    Function intended to manage addresses for mailboxes in Exchange Server environment based on input from csv file.
 	Log and rolback file can be created.
 	    
     .PARAMETER InputFilePath
@@ -28,9 +28,9 @@ Function Manage-MailboxAddresses {
     - AddProxyAddress 
     - RemoveProxyAddress
     - SetSMTPPrimaryAddress
-
-    .PARAMETER FQDNDomainName
-    Active Directory domain name - FQDN
+	
+	.PARAMETER Recipienttype
+	
 
     .PARAMETER CreateRollbackFile
     By default roolback file is created
@@ -64,6 +64,7 @@ Function Manage-MailboxAddresses {
     0.3.0 - 2015-03-15 - Mode set extended, Operation parameter added
     0.4.0 - 2015-03-17 - Operations partially implemented
 	0.5.0 - 2015-03-17 - Function renamed from Set-PrimarySMTPAddress to Manage-MailboxAddresses, help updated
+	0.5.1 - 2015-03-18 - Help updated, parameters: $VerifyInputFileForDuplicates, FQDNDomainName, prefix removed
     
     LICENSE
     Copyright (C) 2015 Wojciech Sciesinski
@@ -93,29 +94,20 @@ param (
 
     [parameter(Mandatory=$true)]
     [String]$InputFilePath,
-    
-    [parameter(Mandatory=$false)]
-    [Bool]$VerifyInputFileForDuplicates=$true,
-
-
-    
+        
     [parameter(Mandatory=$true, `
      HelpMessage="Available modes: DisplayOnly, PerformActions, CreatePerformActionsCommandsOnly, Rollback, CreateRollbackCommnadsOnly")]
     [ValidateSet("DisplayOnly", "PerformActions", "CreatePerformActionsCommandsOnly", "Rollback", "CreateRollbackCommnadsOnly" )]
     [String]$Mode,
-
     
-    [parameter(Mandatory=$true)]
+    [parameter(Mandatory=$true, `
+	 HelpMessage="Available operations: AddProxyAddress, RemoveProxyAddress, SetSMTPPrimaryAddress" )]
     [ValidateSet("AddProxyAddress","RemoveProxyAddress","SetSMTPPrimaryAddress")]
     [String]$Operation,
-
-
-    [parameter(Mandatory=$false)]
-    [ValidateSet("UserMailbox","MailNonUniversalGroup","MailUniversalDistributionGroup")]
-    [String]$RecipientType="UserMailbox",
-    
-    [parameter(mandatory=$false)]
-    [String]$Prefix="smtp:",
+	
+	[parameter(Mandatory=$true)]
+    [ValidateSet("UserMailbox","MailNonUniversalGroup","MailUniversalSecurityGroup","MailUniversalDistributionGroup")]
+    [String]$RecipientType,
     
     [parameter(Mandatory=$false)]
     [Bool]$CreateRollbackFile=$true,
