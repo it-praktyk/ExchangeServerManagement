@@ -1,19 +1,16 @@
-Function Set-PrimarySMTPAddress {
+Function Manage-MailboxAddresses {
 
 <#   
     .SYNOPSIS   
-    Set primary SMTP address for mail objects in Exchange Server environment
+    Function inteded to manage addresses for mailboxes in Exchange environment
   
     .DESCRIPTION   
-    Allow set primary SMTP address for mail objects (mailboxes, distributions groups, mail enabled security groups)
-    based on input file in CSV format
-    
+    Function inteded to manage addresses for mailboxes in Exchange Server environment based on input from csv file.
+	Log and rolback file can be created.
+	    
     .PARAMETER InputFilePath
     The path for file with input data
     
-    .PARAMETER VerifyInputFileForDuplicates
-    By default input file is verified for duplicates
-
     .PARAMETER Mode
     The switch which define action to perform - default mode is DisplayOnly
 
@@ -66,6 +63,7 @@ Function Set-PrimarySMTPAddress {
     0.2.1 - 2015-03-14 - Info about license added - GNU GPLv3
     0.3.0 - 2015-03-15 - Mode set extended, Operation parameter added
     0.4.0 - 2015-03-17 - Operations partially implemented
+	0.5.0 - 2015-03-17 - Function renamed from Set-PrimarySMTPAddress to Manage-MailboxAddresses, help updated
     
     LICENSE
     Copyright (C) 2015 Wojciech Sciesinski
@@ -258,14 +256,14 @@ PROCESS {
             
             Try {
                         
-                $CurrentRecipient = $(Get-Recipient $_.Name -ErrorAction Stop | Where { $_.RecipientType -eq $RecipientType })
+                $CurrentRecipient = $(Get-Recipient $_.RecipientIdentity -ErrorAction Stop | Where { $_.RecipientType -eq $RecipientType })
                 
-                $EmailTestResult = Test-EmailAddress -EmailAddress $_.ProxyAddresses
+                $EmailTestResult = Test-EmailAddress -EmailAddress $_.NewProxyAddress
         
                 If ( $EmailTestResult.ExitCode -ne 0 ) {
         
-                        Write-Error "Email address $_.ProxyAddresses is not correct - Error code: $EmailTestResult.ErrorCode `
-                        , Error description: $EmailTestResult.ErrorDescription, Conflicted object: $EmailTestResult.ConflictedObject ."
+                        Write-Error "Email address $_.NewProxyAddress is not correct - Error code: $($EmailTestResult).ErrorCode `
+                        , Error description: $($EmailTestResult).ErrorDescription, Conflicted object: $($EmailTestResult).ConflictedObject ."
             
                     }
                 
@@ -273,7 +271,7 @@ PROCESS {
             
             Catch {
             
-                Write-Error "Mailbox $_.Name doesn't exist"
+                Write-Error "Mailbox $_.RecipientName doesn't exist"
                 
                 Break
             
