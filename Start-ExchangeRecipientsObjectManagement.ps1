@@ -30,6 +30,9 @@ Function Start-ExchangeRecipientsObjectManagement {
 	- AddProxyAddress 
 	- RemoveProxyAddress
 	- SetSMTPPrimaryAddress
+		
+	.PARAMETER Recipienttype
+	
 
     .PARAMETER DomainName
     Active Directory domain name - FQDN
@@ -60,8 +63,9 @@ Function Start-ExchangeRecipientsObjectManagement {
     KEYWORDS: PowerShell, Exchange, Active Directory, SMTP
 
     VERSION HISTORY
-    0.1.0 - Initial release - untested !
-	0.1.1 - Parameter Operations added, help updated, default values for some parameters removed
+    0.1.0 - 2015-03-15 - Initial release - untested !
+	0.1.1 - 2015-03-17 - Parameter Operations added, help updated, default values for some parameters removed
+	0.1.2 - 2015-03-18 - Parameters updated
 
 	
 	LICENSE
@@ -103,12 +107,13 @@ param (
     [ValidateSet("DisplayOnly", "PerformActions", "CreatePerformActionsCommandsOnly", "Rollback", "CreateRollbackCommnadsOnly" )]
     [String]$Mode="DisplayOnly",
 
-	[parameter(Mandatory=$true)]
-	[ValidateSet("AddProxyAddress","RemoveProxyAddress","SetSMTPPrimaryAddress")]
-	[String]$Operation,
+    [parameter(Mandatory=$true, `
+	 HelpMessage="Available operations: AddProxyAddress, RemoveProxyAddress, SetSMTPPrimaryAddress" )]
+    [ValidateSet("AddProxyAddress","RemoveProxyAddress","SetSMTPPrimaryAddress")]
+    [String]$Operation,
     
     [parameter(Mandatory=$false)]
-    [ValidateSet("UserMailbox","MailNonUniversalGroup","MailUniversalDistributionGroup")]
+    [ValidateSet("UserMailbox","MailNonUniversalGroup","MailUniversalSecurityGroup","MailUniversalDistributionGroup")]
     [String]$RecipientType,
 	
 	[parameter(Mandatory=$false)]
