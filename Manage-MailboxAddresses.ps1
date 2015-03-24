@@ -49,6 +49,15 @@ Function Manage-MailboxAddresses {
     
     .PARAMETER TranscriptFileNamePrefix
     Prefix used for creating transcript files name. Default is "Rollback-"
+	
+	.PARAMETER CreateErrorsReportFile
+	By default error report file is created
+	
+	.PARAMETER ErrorsReportFileDirectoryPath
+	By default error report files are stored in subfolder "errors" in current path, if "errors" subfolder is missed will be created
+	
+	.PARAMETER ErrorsReportFileNamePrefix
+	Prefix used for creating errors report files name. Default is "Errors-"	
  
     .NOTES   
     
@@ -65,6 +74,7 @@ Function Manage-MailboxAddresses {
     0.4.0 - 2015-03-17 - Operations partially implemented
 	0.5.0 - 2015-03-17 - Function renamed from Set-PrimarySMTPAddress to Manage-MailboxAddresses, help updated
 	0.5.1 - 2015-03-18 - Help updated, parameters: $VerifyInputFileForDuplicates, FQDNDomainName, prefix removed
+	0.6.0 - 2015-03-25 - Errors can be saved to separate file
     
     LICENSE
     Copyright (C) 2015 Wojciech Sciesinski
@@ -105,8 +115,9 @@ param (
     [ValidateSet("AddProxyAddress","RemoveProxyAddress","SetSMTPPrimaryAddress")]
     [String]$Operation,
 	
-	[parameter(Mandatory=$true)]
-    [ValidateSet("UserMailbox","MailNonUniversalGroup","MailUniversalSecurityGroup","MailUniversalDistributionGroup")]
+	[parameter(Mandatory=$true, `
+	 HelpMessage="Available recipients types: UserMailbox" )]
+    [ValidateSet("UserMailbox")]
     [String]$RecipientType,
     
     [parameter(Mandatory=$false)]
@@ -125,7 +136,17 @@ param (
     [String]$TranscriptFileDirectoryPath=".\transcripts\",
 
     [parameter(Mandatory=$false)]
-    [String]$TranscriptFileNamePrefix="Transcript-"
+    [String]$TranscriptFileNamePrefix="Transcript-",
+		
+	[parameter(Mandatory=$false)]
+    [Bool]$CreateErrorsReportFile=$true,
+
+    [parameter(Mandatory=$false)]
+    [String]$ErrorsReportFileDirectoryPath=".\errors\",
+
+    [parameter(Mandatory=$false)]
+    [String]$ErrorsReportFileNamePrefix="Errors-"
+	
 
 )
 
@@ -157,7 +178,7 @@ BEGIN {
             
                 Write-Error "Read input file $InputFilePath error "
 
-                Stop-Transcript -ErrorAction SilentlyContinue
+                Stop-Transcript -ErrorAction SilentlyContinue | Out-Null
         
                 break
             
@@ -169,7 +190,7 @@ BEGIN {
         
             Write-Error "Provided value for InputFilePath is not a file"
         
-            Stop-Transcript -ErrorAction SilentlyContinue
+            Stop-Transcript -ErrorAction SilentlyContinue | Out-Null
         
             break
             
@@ -184,9 +205,27 @@ BEGIN {
 
         break
     }
+	
+	If ( $CreateErrorsReportFile ) {
+		
+		#Check if rollback directory exist and try create if not
+		If ( !$((Get-Item -Path $ErrorsReportFileDirectoryPath -ErrorAction SilentlyContinue) -is [system.io.directoryinfo]) ) {
+
+			New-Item -Path $ErrorsReportFileDirectoryPath -type Directory -ErrorAction Stop | Out-Null
+		
+		}
+			
+		$ErrorReportFilePath = $ErrorsReportFileDirectoryPath + $ErrorsReportFileNamePrefix + $StartTime + '.csv'
+			
+		Write-Verbose "Error report data will be written to $ErrorReportFilePath"
+	
+	}
     
     #Declare variable for store results data
     $Results=@()
+	
+	#Declare variable for store errors data
+	$ErrorResults=@()
     
     [int]$i=1
     
@@ -200,7 +239,7 @@ PROCESS {
         
         $PercentCompleted = [math]::Round(($i / $RecipientsCount) * 100)
 
-        $StatusText = "Percent completed $PercentCompleted%, currently the mailbox {0} is checked. " -f $($_.RecipientIdentity).ToString()
+        $StatusText = "Percent completed $PercentCompleted%, currently the recipient {0} is checked. " -f $($_.RecipientIdentity).ToString()
 
         Write-Progress -Activity "Performing action in mode $Mode" -Status $StatusText -PercentComplete $PercentCompleted
         
@@ -212,15 +251,15 @@ PROCESS {
         
             Try {
                         
-                $CurrentRecipientTest1 = $(Get-Recipient $_.RecipientIdentity -ErrorAction Stop | Where { $_.RecipientType -eq $RecipientType })
+                $SelectedRecipientTest1 = $(Get-Recipient $_.RecipientIdentity -ErrorAction Stop | Where { $_.RecipientType -eq $RecipientType })
 
-                Write-Debug "First test for recipient result: $CurrentRecipientTest1"
+                Write-Debug "First test for recipient result: $SelectedRecipientTest1"
                
-                $CurrentRecipientTest2 = $(Get-Recipient $_.NewPrimarySMTPAddress -ErrorAction Stop | Where { $_.RecipientType -eq $RecipientType })
+                $SelectedRecipientTest2 = $(Get-Recipient $_.NewPrimarySMTPAddress -ErrorAction Stop | Where { $_.RecipientType -eq $RecipientType })
 
-                Write-Debug "Second test for recipient result: $CurrentRecipientTest2"
+                Write-Debug "Second test for recipient result: $SelectedRecipientTest2"
                    
-                If( $CurrentRecipientTest1.Guid -ne $CurrentRecipientTest2.Guid ) {
+                If( $SelectedRecipientTest1.Guid -ne $SelectedRecipientTest2.Guid ) {
                 
                     Write-Error -Message "Email address $_.NewPrimarySMTPAddress is not currently assigned to recipient $_.RecipientIdentity with type $_.RecipientType"
         
@@ -229,7 +268,7 @@ PROCESS {
                 
                 Else {
                 
-                    $CurrentRecipient = $CurrentRecipientTest1
+                    $SelectedRecipient = $SelectedRecipientTest1
             
                 }
              
@@ -248,18 +287,20 @@ PROCESS {
             
             Try {
                         
-                $CurrentRecipient = $(Get-Recipient $_.RecipientIdentity -ErrorAction Stop | Where { $_.RecipientType -eq $RecipientType })
+                $SelectedRecipient = $(Get-Recipient $_.RecipientIdentity -ErrorAction Stop | Where { $_.RecipientType -eq $RecipientType })
                 
                 $EmailTestResult = Test-EmailAddress -EmailAddress $_.NewProxyAddress
         
                 If ( $EmailTestResult.ExitCode -ne 0 ) {
+				
+						$ErrorResults+=$EmailTestResult
         
-                        Write-Error "Email address $_.NewProxyAddress is not correct - Error code: $($EmailTestResult).ErrorCode `
-                        , Error description: $($EmailTestResult).ErrorDescription, Conflicted object: $($EmailTestResult).ConflictedObject ."
+						[String]$MessageText = "Email address {0} is not correct. Error code: {1}, Error description: {2}, Conflicted object {3} " `
+						-f $_.ProxyAddresses,$EmailTestResult.ExitCode,$EmailTestResult.ExitDescription,$EmailTestResult.ConflictedObjectAlias
+						
+						Write-Output $MessageText -ForegroundColor red
             
-                    }
-                
-                }
+				}
             
             Catch {
             
@@ -272,7 +313,7 @@ PROCESS {
             
         }
             
-        if ( $AcceptedRecipientTypes -notcontains $CurrentRecipientTest1.Recipienttype) {
+        if ( $AcceptedRecipientTypes -notcontains $SelectedRecipientTest1.Recipienttype) {
                     
             Write-Error -Message "This function can only process recipients with type UserMailbox - for Recipient $_.RecipientIdentity type is $_.RecipientIdentity"
                         
@@ -281,9 +322,9 @@ PROCESS {
         }
 
 
-        $CurrentMailbox = Get-Mailbox -Identity $($CurrentRecipient.Alias)
+        $CurrentRecipient = Get-Mailbox -Identity $($SelectedRecipient.Alias)
     
-        Write-Verbose -Message "Performing action on $CurrentMailbox.Alias in mode $Mode ."
+        Write-Verbose -Message "Performing action on $CurrentRecipient.Alias in mode $Mode ."
                     
         #Object properties before any changes - common part of Result objects
 
@@ -293,13 +334,13 @@ PROCESS {
                     
         $Result | Add-Member -MemberType NoteProperty -name RecipientType -value $_.RecipientType
                     
-        $Result | Add-Member -MemberType NoteProperty -Name RecipientGuid -Value $CurrentMailbox.Guid
+        $Result | Add-Member -MemberType NoteProperty -Name RecipientGuid -Value $CurrentRecipient.Guid
                     
-        $Result | Add-Member -MemberType NoteProperty -name RecipientAlias  -value $CurrentMailbox.Alias
+        $Result | Add-Member -MemberType NoteProperty -name RecipientAlias  -value $CurrentRecipient.Alias
                     
-        $Result | Add-Member -MemberType NoteProperty -Name PrimarySMTPAddressBefore -Value $CurrentMailbox.PrimarySMTPAddress
+        $Result | Add-Member -MemberType NoteProperty -Name PrimarySMTPAddressBefore -Value $CurrentRecipient.PrimarySMTPAddress
 
-        $AllProxyAddressesStringBefore = ( @(select-Object -InputObject $CurrentMailbox -expandproperty emailaddresses) -join ',')
+        $AllProxyAddressesStringBefore = ( @(select-Object -InputObject $CurrentRecipient -expandproperty emailaddresses) -join ',')
                         
         $Result | Add-Member -MemberType NoteProperty -name ProxyAddressesBefore -value $AllProxyAddressesStringBefore
                     
@@ -319,11 +360,11 @@ PROCESS {
                     
             Elseif ( $Mode -eq 'PerformActions') {
                             
-                Set-Mailbox -Identity $CurrentMailbox -EmailAddresses @{add=($ProxyAddressStringToAdd)} -ErrorAction Continue
+                Set-Mailbox -Identity $CurrentRecipient -EmailAddresses @{add=($ProxyAddressStringToAdd)} -ErrorAction Continue
                             
-                $CurrentMailboxAfter = Get-Mailbox -Identity $($CurrentRecipient.Alias)
+                $CurrentRecipientAfter = Get-Mailbox -Identity $($SelectedRecipient.Alias)
                                                 
-                $AllProxyAddressesStringAfter = ( @(select-Object -InputObject $CurrentMailboxAfter -ExpandProperty emailaddresses) -join ',')
+                $AllProxyAddressesStringAfter = ( @(select-Object -InputObject $CurrentRecipientAfter -ExpandProperty emailaddresses) -join ',')
                         
                 $Result | Add-Member -type NoteProperty -name ProxyAddressesAfter -value $AllProxyAddressesStringAfter
                                                 
@@ -343,7 +384,7 @@ PROCESS {
                         
             If ( $Mode -eq 'DisplayOnly' ) {
                     
-                $Result | Add-Member -MemberType NoteProperty -Name PrimarySMTPAddresAfter -Value $CurrentMailbox.PrimarySMTPAddress
+                $Result | Add-Member -MemberType NoteProperty -Name PrimarySMTPAddresAfter -Value $CurrentRecipient.PrimarySMTPAddress
 
                 $Result | Add-Member -MemberType NoteProperty -name ProxyAddressesAfter -value $AllProxyAddressesStringBefore #This need to be changed - replace for 
                             
@@ -351,13 +392,13 @@ PROCESS {
                     
             Elseif ( $Mode -eq 'PerformActions') {
                             
-                Set-Mailbox -Identity $CurrentMailbox -PrimarySMTPAddress $_.NewPrimarySMTPAddress -ErrorAction Continue
+                Set-Mailbox -Identity $CurrentRecipient -PrimarySMTPAddress $_.NewPrimarySMTPAddress -ErrorAction Continue
                             
-                $CurrentMailboxAfter = Get-Mailbox $CurrentMailbox
+                $CurrentRecipientAfter = Get-Mailbox $CurrentRecipient
                         
-                $Result | Add-Member -MemberType NoteProperty -Name PrimarySMTPAddressAfter -Value $CurrentMailboxAfter.PrimarySMTPAddress
+                $Result | Add-Member -MemberType NoteProperty -Name PrimarySMTPAddressAfter -Value $CurrentRecipientAfter.PrimarySMTPAddress
                                                 
-                $AllProxyAddressesStringAfter = ( @(select-Object -InputObject $CurrentMailboxAfter -ExpandProperty emailaddresses) -join ',')
+                $AllProxyAddressesStringAfter = ( @(select-Object -InputObject $CurrentRecipientAfter -ExpandProperty emailaddresses) -join ',')
                         
                 $Result | Add-Member -MemberType NoteProperty -name ProxyAddressesAfter -value $AllProxyAddressesStringAfter
                                                 
@@ -394,7 +435,7 @@ END {
         #Check if rollback directory exist and try create if not
         If ( !$((Get-Item -Path $RollBackFileDirectoryPath -ErrorAction SilentlyContinue) -is [system.io.directoryinfo]) ) {
 
-            New-Item -Path $RollBackFileDirectoryPath -Type Directory -ErrorAction Stop
+            New-Item -Path $RollBackFileDirectoryPath -Type Directory -ErrorAction Stop | Out-Null
         
         }
             
@@ -434,8 +475,24 @@ END {
         Return $Results
 
     }
+	
+	#Save errors to errors report file
+	If ( $CreateErrorsReportFile ) {
+	
+		Write-Verbose "Write errors data to file $ErrorReportFilePath"
+
+		$ErrorResults | Export-CSV -Path $ErrorReportFilePath -NoTypeInformation -Delimiter ";" -Encoding UTF8 -ErrorAction Continue
+		
+	}
+	
+	#Display errors to console - also can be redirected to file 
+	Else {
+	
+		Return $ErrorResults
+
+	}
         
-    Stop-Transcript -ErrorAction SilentlyContinue
+    Stop-Transcript -ErrorAction SilentlyContinue | Out-Null
 
 }
 }
@@ -557,7 +614,7 @@ PROCESS {
 
         #Start new PowerShell transcript
 
-        Start-Transcript -Path $FullTranscriptFilePath -ErrorAction Stop
+        Start-Transcript -Path $FullTranscriptFilePath -ErrorAction Stop | Out-Null
 
         Write-Verbose -Message "Transcript will be written to $FullTranscriptFilePath"
     
