@@ -30,8 +30,11 @@ Function Manage-MailboxAddresses
     - RemoveProxyAddress
     - SetSMTPPrimaryAddress
 	
-	.PARAMETER Recipienttype
+	.PARAMETER RecipientType
+	Recipient type for which operation need to be performed - default UserMailbox
 	
+	.PARAMETER HonorSkipFlag
+	Use to honor skip flag from input file	
 
     .PARAMETER CreateRollbackFile
     By default roolback file is created
@@ -61,8 +64,7 @@ Function Manage-MailboxAddresses
 	Prefix used for creating errors report files name. Default is "Errors-"	
  
     .NOTES   
-    
-    
+        
     AUTHOR: Wojciech Sciesinski, wojciech[at]sciesinski[dot]net
 
     KEYWORDS: PowerShell, Exchnange, Active Directory, SMTP
@@ -78,6 +80,7 @@ Function Manage-MailboxAddresses
 	0.6.0 - 2015-03-25 - Errors can be saved to separate file
 	0.6.1 - 2015-03-30 - Minor update for initial checks section
 	0.6.2 - 2015-03-30 - Skip parameter in input file implemented
+	0.6.4 - 2015-04-02 - HonorSkipFlag parameter added, help updated, file reformatted 
     
     LICENSE
     Copyright (C) 2015 Wojciech Sciesinski
@@ -122,6 +125,9 @@ Function Manage-MailboxAddresses
 				   HelpMessage = "Available recipients types: UserMailbox")]
 		[ValidateSet("UserMailbox")]
 		[String]$RecipientType,
+		
+		[parameter(Mandatory = $true)]
+		[Bool]$HonorSkipFlag = $false,	
 		
 		[parameter(Mandatory = $false)]
 		[Bool]$CreateRollbackFile = $true,
@@ -177,7 +183,18 @@ Function Manage-MailboxAddresses
 				try
 				{
 					
-					$RecipientsFromInputFile = (Import-CSV -Path $InputFilePath -Delimiter ";" -ErrorAction Stop | Where { $_.SkipRecipientCode -eq 0 -or $_.SkipRecipientCode -eq $false })
+					If ($HonorSkipFlag -eq $true)
+					{
+						
+						$RecipientsFromInputFile = (Import-CSV -Path $InputFilePath -Delimiter ";" -ErrorAction Stop | Where { $_.SkipRecipientCode -eq 0 -or $_.SkipRecipientCode -eq $false })
+						
+					}
+					Else
+					{
+						
+						$RecipientsFromInputFile = (Import-CSV -Path $InputFilePath -Delimiter ";" -ErrorAction Stop 
+						
+					}
 					
 					[Int]$RecipientsCount = $($RecipientsFromInputFile | Measure-Object).count
 					
