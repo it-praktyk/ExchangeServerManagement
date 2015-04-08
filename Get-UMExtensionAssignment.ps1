@@ -1,5 +1,4 @@
-Function Get-UMExtensionAssignment
-{
+Function Get-UMExtensionAssignment {
     
 <#
 	.SYNOPSIS
@@ -26,10 +25,12 @@ Function Get-UMExtensionAssignment
 	KEYWORDS: PowerShell, UM, Exchange, Lync, Active Directory
 	VERSION HISTORY
 	0.5.1 - 2015-04-02 - First version uploaded to GitHub
+	0.6.0 - 2015-04-08 - Formats corrected, only objects for currently assigned extension (non null) objects returned, to do updated
 	
     TODO
     - check if Exchange cmdlets are available
     - add parameter to provide extension from CLI
+    - add option to return not assigned (free) extensions
    
 	LICENSE
     Copyright (C) 2015 Wojciech Sciesinski
@@ -53,20 +54,16 @@ Function Get-UMExtensionAssignment
         [parameter(mandatory = $false)]
         [alias("Path", "UMExtensionsFilePath")]
         [String]$InputFilePath
-                
+        
     )
     
-    BEGIN
-    {
+    BEGIN {
         
-        If (Test-Path -Path $InputFilePath)
-        {
+        If (Test-Path -Path $InputFilePath) {
             
-            If ((Get-Item -Path $InputFilePath) -is [System.IO.fileinfo])
-            {
+            If ((Get-Item -Path $InputFilePath) -is [System.IO.fileinfo]) {
                 
-                try
-                {
+                try {
                     
                     $Extensions = get-Content -Path $InputFilePath
                     
@@ -75,8 +72,7 @@ Function Get-UMExtensionAssignment
                     Write-Verbose "$ExtensionsCount extensions to check"
                     
                 }
-                catch
-                {
+                catch {
                     
                     Write-Error "Read input file $InputFilePath error "
                     
@@ -86,8 +82,7 @@ Function Get-UMExtensionAssignment
                 
             }
             
-            Else
-            {
+            Else {
                 
                 Write-Error "Provided value for InputFilePath is not a file"
                 
@@ -96,8 +91,7 @@ Function Get-UMExtensionAssignment
             }
             
         }
-        Else
-        {
+        Else {
             
             Write-Error "Provided value for InputFilePath doesn't exist"
             
@@ -118,11 +112,9 @@ Function Get-UMExtensionAssignment
         
     }
     
-    PROCESS
-    {
+    PROCESS {
         
-        $Extensions | ForEach
-        {
+        $Extensions | ForEach {
             
             $PercentCompleted = [math]::Round(($i / $ExtensionsCount) * 100)
             
@@ -136,42 +128,51 @@ Function Get-UMExtensionAssignment
             
             $CurrentUMMailbox = ($UMMailboxes | where { $_.Extensions -eq $CurrentUMExtension } | select -Property Name, DisplayName, Guid, LinkedMasterAccount, UMEnabled, PrimarySMTPAddress, Extensions)
             
-            $SortedExtensions = ($CurrentUMMailbox | Select -ExpandProperty Extensions | Sort)
-            
-            $Result = New-Object PSObject
-            
-            $Result | Add-Member -type NoteProperty -name MailboxAlias -value $CurrentUMMailbox.Name
-            
-            $Result | Add-Member -type NoteProperty -name MailboxDisplayName -value $CurrentUMMailbox.DisplayName
-            
-            $Result | Add-Member -type NoteProperty -name MailboxGuid -value $CurrentUMMailbox.Guid
-            
-            $Result | Add-Member -type NoteProperty -name LinkedMasterAccount -value $CurrentUMMailbox.LinkedMasterAccount
-            
-            $Result | Add-Member -type NoteProperty -name PrimarySMTPAddress -value $CurrentUMMailbox.PrimarySMTPAddress
-            
-            $Result | Add-Member -type NoteProperty -name MailboxUMEnabled -value $CurrentUMMailbox.UMEnabled
-            
-            $Result | Add-Member -type NoteProperty -name MailboxUMExtensionsCount -value $($SortedExtensions | Measure).Count
-            
-            $Result | Add-Member -type NoteProperty -name MailboxUMExtensions -value $($SortedExtensions -join ',')
-            
-            $e = 1
-            
-            $SortedExtensions | ForEach {
+            If ($CurrentUMMailbox) {
                 
-                $Result | Add-Member -type NoteProperty -name MailboxUMExtensions$e -value $_
+                $SortedExtensions = ($CurrentUMMailbox | Select -ExpandProperty Extensions | Sort)
                 
-                $e++
-                                
+                $Result = New-Object PSObject
+                
+                $Result | Add-Member -type NoteProperty -name MailboxAlias -value $CurrentUMMailbox.Name
+                
+                $Result | Add-Member -type NoteProperty -name MailboxDisplayName -value $CurrentUMMailbox.DisplayName
+                
+                $Result | Add-Member -type NoteProperty -name MailboxGuid -value $CurrentUMMailbox.Guid
+                
+                $Result | Add-Member -type NoteProperty -name LinkedMasterAccount -value $CurrentUMMailbox.LinkedMasterAccount
+                
+                $Result | Add-Member -type NoteProperty -name PrimarySMTPAddress -value $CurrentUMMailbox.PrimarySMTPAddress
+                
+                $Result | Add-Member -type NoteProperty -name MailboxUMEnabled -value $CurrentUMMailbox.UMEnabled
+                
+                $Result | Add-Member -type NoteProperty -name MailboxUMExtensionsCount -value $($SortedExtensions | Measure).Count
+                
+                $Result | Add-Member -type NoteProperty -name MailboxUMExtensions -value $($SortedExtensions -join ',')
+                
+                $e = 1
+                
+                $SortedExtensions | ForEach {
+                    
+                    $Result | Add-Member -type NoteProperty -name MailboxUMExtensions$e -value $_
+                    
+                    $e++
+                    
+                }
+                
+                [String]$MessageText = "UM extension {0} currently assigned to mailbox {1} with PrimarySMTPAddress {2} ; mailbox is UMEnabled: {3}" `
+                -f $CurrentUMExtension, $CurrentUMMailbox.Name, $CurrentUMMailbox.PrimarySMTPAddress, $CurrentUMMailbox.UMEnabled
+                
+                $Results += $Result
+                
+            }
+            Else {
+                
+                [String]$MessageText = "UM extension {0} is not currently assigned to any mailbox" -f $CurrentUMExtension
+                
             }
             
-            [String]$MessageText = "UM extension {0} currently assigned to mailbox {1} with PrimarySMTPAddress {2} ; mailbox is UMEnabled: {3}" `
-            -f $CurrentUMExtension, $CurrentUMMailbox.Name, $CurrentUMMailbox.PrimarySMTPAddress, $CurrentUMMailbox.UMEnabled
-            
             Write-Verbose -Message $MessageText
-            
-            $Results += $Result
             
             $i++
             
@@ -179,8 +180,7 @@ Function Get-UMExtensionAssignment
         
     }
     
-    END
-    {
+    END {
         
         Return $Results
         
