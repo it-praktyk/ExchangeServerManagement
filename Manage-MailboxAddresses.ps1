@@ -81,6 +81,7 @@ Function Manage-MailboxAddresses {
 	0.6.2 - 2015-03-30 - Skip parameter in input file implemented
 	0.6.4 - 2015-04-02 - HonorSkipFlag parameter added, help updated, file reformatted 
     0.6.5 - 2015-04-09 - file reformated
+    0.7.0 - 2015-04-09 - RemoveProxyAddress operation implemented
     
     LICENSE
     Copyright (C) 2015 Wojciech Sciesinski
@@ -99,6 +100,7 @@ Function Manage-MailboxAddresses {
     TO DO
     Add checking if mailbox/recipient has enabled 'useemailaddresspolicy'
     Skipping for objects need to be implemented
+    Test to disable remove primary SMTP address need to be added
     
    
     
@@ -447,6 +449,34 @@ Function Manage-MailboxAddresses {
             }
             
             elseif ($Operation -eq 'RemoveProxyAddress') {
+                
+                If ($Mode -eq 'DisplayOnly') {
+                    
+                    [String]$ProxyAddressStringToRemove = "{0}{1}" -f $Prefix, $_.RemoveProxyAddress
+                    
+                    $Result | Add-Member -MemberType NoteProperty -name ProxyAddressesProposal -value $ProxyAddressStringProposal
+                    
+                    $Result | Add-Member -type NoteProperty -name ProxyAddressesAfter -value $AllProxyAddressesStringBefore
+                    
+                }
+                
+                Elseif ($Mode -eq 'PerformActions') {
+                    
+                    Set-Mailbox -Identity $CurrentRecipient -EmailAddresses @{ remove = ($ProxyAddressStringToRemove) } -ErrorAction Continue
+                    
+                    $CurrentRecipientAfter = Get-Mailbox -Identity $($SelectedRecipient.Alias)
+                    
+                    $AllProxyAddressesStringAfter = (@(select-Object -InputObject $CurrentRecipientAfter -ExpandProperty emailaddresses) -join ',')
+                    
+                    $Result | Add-Member -type NoteProperty -name ProxyAddressesAfter -value $AllProxyAddressesStringAfter
+                    
+                }
+                
+                ElseIf ($Mode -eq 'Rollback') {
+                    
+                    Write-Error -Message "Rollback mode is not implemented yet"
+                    
+                }
                 
                 
             }
