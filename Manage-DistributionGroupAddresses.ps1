@@ -63,8 +63,7 @@ Function Manage-DistributionGroupAddresses {
 	Prefix used for creating errors report files name. Default is "Errors-"	
  
     .NOTES   
-    
-    
+        
     AUTHOR: Wojciech Sciesinski, wojciech[at]sciesinski[dot]net
 
     KEYWORDS: PowerShell, Exchnange, Active Directory, SMTP
@@ -73,6 +72,7 @@ Function Manage-DistributionGroupAddresses {
     0.1.0 - 2015-03-17 - Initial release, mostly based on Manage-MailboxAddresses.ps1 v. 0.5.1
 	0.2.0 - 2015-03-25 - Errors can be saved to separate file
     0.3.0 - 2015-04-09 - Parameter HonorSkipFlag added, script reformated
+    0.4.0 - 2015-04-09 - Minor update for initial checks section, RemoveProxyAddress operation implemented
     
     LICENSE
     Copyright (C) 2015 Wojciech Sciesinski
@@ -91,6 +91,7 @@ Function Manage-DistributionGroupAddresses {
     TO DO
     Add checking if mailbox/recipient has enabled 'useemailaddresspolicy'
     Skipping for objects need to be implemented
+    Test to disable remove primary SMTP address need to be added
     
    
     
@@ -263,9 +264,23 @@ Function Manage-DistributionGroupAddresses {
                     
                     $SelectedRecipientTest1 = $(Get-Recipient $_.RecipientIdentity -ErrorAction Stop | Where { $_.RecipientType -eq $RecipientType })
                     
+                    $SelectedRecipientTest1Count = (Measure-Object -InputObject $SelectedRecipientTest1).Count
+                                        
                     Write-Debug "First test for recipient result: $SelectedRecipientTest1"
                     
                     $SelectedRecipientTest2 = $(Get-Recipient $_.NewPrimarySMTPAddress -ErrorAction Stop | Where { $_.RecipientType -eq $RecipientType })
+                    
+                    $SelectedRecipientTest2Count = (Measure-Object -InputObject $SelectedRecipientTest2).Count
+                    
+                    If (($SelectedRecipientTest1Count + $SelectedRecipientTest2Count) -ne 2) {
+                        
+                        [String]$MessageText = "Recipient  {0} is not {1} or email address {2} is not currently assigned to any recipient with type {1}" -f $_.RecipientIdentity, $_.RecipientType, $_.NewPrimarySMTPAddress
+                        
+                        Write-Error -Message $MessageText -ErrorAction Continue
+                        
+                        Break
+                        
+                    }
                     
                     Write-Debug "Second test for recipient result: $SelectedRecipientTest2"
                     
