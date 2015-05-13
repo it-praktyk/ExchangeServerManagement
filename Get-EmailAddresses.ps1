@@ -25,7 +25,8 @@ function Get-EmailAddresses {
 	KEYWORDS: PowerShell, Exchange, EmailAddresses, ProxyAddresses
    
 	VERSIONS HISTORY
-	0.6.0 -  2015-05-14 - First version published on GitHub, partially based on Get-SMTPAddresses v. 0.7.0
+	0.6.0 - 2015-05-14 - First version published on GitHub, partially based on Get-SMTPAddresses v. 0.7.0
+	0.6.1 - 2015-05-14 - AppendPrefixToResultAddresses parameter added, emails subgroup for prefixes added to output object
 
 	TODO
     - check if Exchange cmdlets are available
@@ -55,7 +56,10 @@ function Get-EmailAddresses {
     Param (
         
         [Parameter(Mandatory = $true, Position = 0)]
-        [String]$InputFilePath
+        [String]$InputFilePath,
+        
+        [Parameter(Mandatory = $false, Position = 1)]
+        [Bool]$AppendPrefixToResultAddresses = $false
         
     )
     
@@ -186,6 +190,10 @@ function Get-EmailAddresses {
                         
                         $Result | Add-Member -Type 'NoteProperty' -Name $CurrentPrefixAddressCountColumnName -Value $EmailsWithPrefixCount
                         
+                        [String]$CurrentPrefixAddressessColumnName = "{0}{1}" -f "AddressesForPrefix_", $CurrentPrefix
+                        
+                        $Result | Add-Member -Type 'NoteProperty' -Name $CurrentPrefixAddressessColumnName -Value $($EmailsWithPrefix.ProxyAddressString -join ',')
+                        
                         $e = 1
                         
                         #Loop for emails with current prefix
@@ -196,7 +204,16 @@ function Get-EmailAddresses {
                             
                             [String]$CurrentEmailAddressColumnName = "{0}{1}{2}" -f $CurrentPrefix, "_Address_", $e
                             
-                            $Result | Add-Member -Type 'NoteProperty' -Name $CurrentEmailAddressColumnName -Value $CurrentEmailAddressWithPrefix.ProxyAddressString
+                            If ($AppendPrefixToResultAddresses) {
+                                
+                                $Result | Add-Member -Type 'NoteProperty' -Name $CurrentEmailAddressColumnName -Value $CurrentEmailAddressWithPrefix.ProxyAddressString
+                                
+                            }
+                            Else {
+                                
+                                $Result | Add-Member -Type 'NoteProperty' -Name $CurrentEmailAddressColumnName -Value $CurrentEmailAddressWithPrefix.AddressString
+                                
+                            }
                             
                             $e++
                             
