@@ -27,6 +27,7 @@ function Get-EmailAddresses {
 	VERSIONS HISTORY
 	0.6.0 - 2015-05-14 - First version published on GitHub, partially based on Get-SMTPAddresses v. 0.7.0
 	0.6.1 - 2015-05-14 - AppendPrefixToResultAddresses parameter added, emails subgroup for prefixes added to output object
+	0.7.0 - 2015-05-14 - Updated to achieve compatibility with Exchange 2010 and PowerShell 2.0
 
 	TODO
     - check if Exchange cmdlets are available
@@ -148,7 +149,9 @@ function Get-EmailAddresses {
                     
                     $CurrentRecipientAddressesCount = ($CurrentRecipientAddresses | Measure-Object).Count
                     
-                    $SortedPrefixes = ($CurrentRecipientAddresses | select Prefix -Unique | Sort).Prefix
+                    $SortedPrefixes = @()
+                    
+                    ($CurrentRecipientAddresses | select Prefix -Unique | ForEach { $SortedPrefixes += ($_.Prefix) })
                     
                     $PrefixesCount = ($SortedPrefixes | Measure-Object).Count
                     
@@ -192,7 +195,9 @@ function Get-EmailAddresses {
                         
                         [String]$CurrentPrefixAddressessColumnName = "{0}{1}" -f "AddressesForPrefix_", $CurrentPrefix
                         
-                        $Result | Add-Member -Type 'NoteProperty' -Name $CurrentPrefixAddressessColumnName -Value $($EmailsWithPrefix.ProxyAddressString -join ',')
+                        [String]$CurrentPrefixAddresses = [string]::Join(",", $($CurrentRecipientAddresses | where { $_.Prefix -match $CurrentPrefix } | ForEach { $_.ProxyAddressString }))
+                        
+                        $Result | Add-Member -Type 'NoteProperty' -Name $CurrentPrefixAddressessColumnName -Value $CurrentPrefixAddresses
                         
                         $e = 1
                         
