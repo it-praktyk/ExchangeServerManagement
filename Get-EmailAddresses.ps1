@@ -28,6 +28,7 @@ function Get-EmailAddresses {
 	0.6.0 - 2015-05-14 - First version published on GitHub, partially based on Get-SMTPAddresses v. 0.7.0
 	0.6.1 - 2015-05-14 - AppendPrefixToResultAddresses parameter added, emails subgroup for prefixes added to output object
 	0.7.0 - 2015-05-14 - Updated to achieve compatibility with Exchange 2010 and PowerShell 2.0
+	0.7.1 - 2015-05-18 - Workaround to standarize PowerShell output object implemented
 
 	TODO
     - check if Exchange cmdlets are available
@@ -118,7 +119,7 @@ function Get-EmailAddresses {
     
     PROCESS {
         
-        $RecipientsFromFile | ForEach  {
+        $RecipientsFromFile | ForEach {
             
             $PercentCompleted = [math]::Round(($i / $RecipientsFromFileCount) * 100)
             
@@ -223,6 +224,27 @@ function Get-EmailAddresses {
                             $e++
                             
                         }
+                        
+                        #Workaround to standarize PowerShellObjects - for any object and prefix will be generate 10 columns
+                        
+                        do {
+                            [String]$CurrentEmailAddressColumnName = "{0}{1}{2}" -f $CurrentPrefix, "_Address_", $e
+                            
+                            If ($AppendPrefixToResultAddresses) {
+                                
+                                $Result | Add-Member -Type 'NoteProperty' -Name $CurrentEmailAddressColumnName -Value $CurrentEmailAddressWithPrefix.ProxyAddressString
+                                
+                            }
+                            Else {
+                                
+                                $Result | Add-Member -Type 'NoteProperty' -Name $CurrentEmailAddressColumnName -Value $null
+                                
+                            }
+                            
+                            $e++
+                            
+                        }
+                        while ($e -lt 11)
                         
                         
                     }
