@@ -84,6 +84,7 @@ Function Manage-MailboxAddresses {
     0.7.0 - 2015-04-09 - RemoveProxyAddress operation implemented
 	0.7.1 - 2015-05-19 - Small corrections
     0.7.2 - 2015-05-19 - Tests for RemoveProxyAddresses and SetPrimarySMTPAddress corrected
+    0.7.3 - 2015-05-19 - Test partially rewrote
 	
     
     LICENSE
@@ -270,7 +271,7 @@ Function Manage-MailboxAddresses {
 			
 			Write-Verbose -Message $MessageText
 			
-			If (@("RemoveProxyAddress", "SetSMTPPrimaryAddress") -contains $Operation) {
+			If ( $Operation -eq 'SetSMTPPrimaryAddress') {
 				
 				Try {
 					
@@ -279,23 +280,14 @@ Function Manage-MailboxAddresses {
 					$SelectedRecipientTest1Count = (Measure-Object -InputObject $SelectedRecipientTest1).Count
                     
                     Write-Debug "First test for recipient result: $SelectedRecipientTest1"
-                    
-                    If ($Operation -eq 'SetSMTPPrimaryAddress') {
-                        
-                        $SelectedRecipientTest2 = $(Get-Recipient $_.NewPrimarySMTPAddress -ErrorAction Stop | Where { $_.RecipientType -eq $RecipientType })
-                        
-                    }
-                    else {
-                        
-                        $SelectedRecipientTest2 = $(Get-Recipient $_.RemoveProxyAddress -ErrorAction Stop | Where { $_.RecipientType -eq $RecipientType })
-                        
-                    }
+                  
+                    $SelectedRecipientTest2 = $(Get-Recipient $_.NewPrimarySMTPAddress -ErrorAction Stop | Where { $_.RecipientType -eq $RecipientType })
+                           
+                    $SelectedRecipientTest2Count = (Measure-Object -InputObject $SelectedRecipientTest2).Count
 					
-					$SelectedRecipientTest2Count = (Measure-Object -InputObject $SelectedRecipientTest2).Count
-					
-					If (($SelectedRecipientTest1Count + $SelectedRecipientTest2Count) -ne 2) {
+					If ($SelectedRecipientTest1Count + $SelectedRecipientTest2Count -ne 2 ) {
 						
-						[String]$MessageText = "Recipient  {0} is not {1} or email address {2} is not currently assigned to any recipient with type {1}" -f $_.RecipientIdentity, $_.RecipientType, $_.NewPrimarySMTPAddress
+						[String]$MessageText = "Recipient  {0} is not {1} or email {2} is not currently assigned to any recipient with type {1}" -f $_.RecipientIdentity, $_.RecipientType, $_.NewPrimarySMTPAddress
 						
 						Write-Error -Message $MessageText -ErrorAction Continue
 						
@@ -322,46 +314,106 @@ Function Manage-MailboxAddresses {
 				
 				Catch {
 					
-					Write-Error "Recipient $($_).RecipientIdentity or with address $_.NewPrimarySMTPAddress doesn't exist"
+					Write-Error "Recipient with identity $($_).RecipientIdentity or with address $_.NewPrimarySMTPAddress doesn't exist"
 					
 					Break
 					
 				}
-				
-			}
-			Elseif (@("AddProxyAddress") -contains $Operation) {
-				
-				Try {
-					
-					$SelectedRecipient = $(Get-Recipient $_.RecipientIdentity -ErrorAction Stop | Where { $_.RecipientType -eq $RecipientType })
-					
-					$EmailTestResult = Test-EmailAddress -EmailAddress $_.NewProxyAddress
-					
-					If ($EmailTestResult.ExitCode -ne 0) {
-						
-						$ErrorResults += $EmailTestResult
-						
-						[String]$MessageText = "Email address {0} is not correct. Error code: {1}, Error description: {2}, Conflicted object {3} " `
-						-f $_.ProxyAddresses, $EmailTestResult.ExitCode, $EmailTestResult.ExitDescription, $EmailTestResult.ConflictedObjectAlias
-						
-						Write-Output $MessageText -ForegroundColor red
-						
-					}
-					
-				}
-				
-				Catch {
-					
-					Write-Error "Mailbox $_.RecipientName doesn't exist"
-					
-					Break
-					
-				}
-				
-				
-			}
-			
-			if ($AcceptedRecipientTypes -notcontains $SelectedRecipientTest1.Recipienttype) {
+                
+            }
+            
+            If ($Operation -eq 'RemoveProxyAddress' ) {
+                
+                Try {
+                    
+                    $SelectedRecipientTest1 = $(Get-Recipient $_.RecipientIdentity -ErrorAction Stop | Where { $_.RecipientType -eq $RecipientType })
+                    
+                    $SelectedRecipientTest1Count = (Measure-Object -InputObject $SelectedRecipientTest1).Count
+                    
+                    Write-Debug "First test for recipient result: $SelectedRecipientTest1"
+                                        
+                    [String]$ProxyAddressStringToRemove = ("{0}:{1}").Replace('::',':') -f $RemoveProxyAddressPrefix, $_.RemoveProxyAddress
+                        
+                    $SelectedRecipientSubTest2 = (($(Get-Recipient $_. RecipientIdentity -ErrorAction Stop | Where { $_.RecipientType -eq $RecipientType })).EmailAddresses -match $ProxyAddressStringToRemove)
+                    
+                    if ($SelectedRecipientSubTest2) {
+                        
+                        $SelectedRecipientTest2 = $SelectedRecipientTest1
+                        
+                    }
+                    
+                    $SelectedRecipientTest2Count = (Measure-Object -InputObject $SelectedRecipientTest2).Count
+                    
+                    If (($SelectedRecipientTest1Count + $SelectedRecipientTest2Count) -ne 2) {
+                        
+                        [String]$MessageText = "Recipient  {0} is not {1} or email {2} is not currently assigned to any recipient with type {1}" -f $_.RecipientIdentity, $_.RecipientType, $_.NewPrimarySMTPAddress
+                        
+                        Write-Error -Message $MessageText -ErrorAction Continue
+                        
+                        Break
+                        
+                    }
+                    
+                    Write-Debug "Second test for recipient result: $SelectedRecipientTest2"
+                    
+                    If ($SelectedRecipientTest1.Guid -ne $SelectedRecipientTest2.Guid) {
+                        
+                        Write-Error -Message "Email address $_.NewPrimarySMTPAddress is not currently assigned to recipient $_.RecipientIdentity with type $_.RecipientType"
+                        
+                        Break
+                    }
+                    
+                    Else {
+                        
+                        $SelectedRecipient = $SelectedRecipientTest1
+                        
+                    }
+                    
+                }
+                
+                Catch {
+                    
+                    Write-Error "Recipient $($_).RecipientIdentity or with address $_.NewPrimarySMTPAddress doesn't exist"
+                    
+                    Break
+                    
+                }
+                
+            }
+            
+            Elseif ($Operation -eq "AddProxyAddress" ){
+                
+                Try {
+                    
+                    $SelectedRecipient = $(Get-Recipient $_.RecipientIdentity -ErrorAction Stop | Where { $_.RecipientType -eq $RecipientType })
+                    
+                    $EmailTestResult = Test-EmailAddress -EmailAddress $_.NewProxyAddress
+                    
+                    If ($EmailTestResult.ExitCode -ne 0) {
+                        
+                        $ErrorResults += $EmailTestResult
+                        
+                        [String]$MessageText = "Email address {0} is not correct. Error code: {1}, Error description: {2}, Conflicted object {3} " `
+                        -f $_.ProxyAddresses, $EmailTestResult.ExitCode, $EmailTestResult.ExitDescription, $EmailTestResult.ConflictedObjectAlias
+                        
+                        Write-Output $MessageText -ForegroundColor red
+                        
+                    }
+                    
+                }
+                
+                Catch {
+                    
+                    Write-Error "Mailbox $_.RecipientName doesn't exist"
+                    
+                    Break
+                    
+                }
+                
+                
+            }
+            
+            if ($AcceptedRecipientTypes -notcontains $SelectedRecipientTest1.Recipienttype) {
 				
 				Write-Error -Message "This function can only process recipients with type UserMailbox - for Recipient $_.RecipientIdentity type is $_.RecipientIdentity"
 				
@@ -463,10 +515,10 @@ Function Manage-MailboxAddresses {
 			elseif ($Operation -eq 'RemoveProxyAddress') {
 				
 				If ($Mode -eq 'DisplayOnly') {
-					veProxyAddress
-					[String]$ProxyAddressStringToRemove = "{0}{1}" -f $RemoveProxyAddressPrefix, $_.Remo
+                    
+                    [String]$ProxyAddressesStringProposal = (($ProxyAddressesBefore).Replace($ProxyAddressStringToRemove,'')).Replace(',,',',')
 					
-					$Result | Add-Member -MemberType NoteProperty -name ProxyAddressesProposal -value $ProxyAddressStringProposal
+					$Result | Add-Member -MemberType NoteProperty -name ProxyAddressesProposal -value $ProxyAddressesStringProposal
 					
 					$Result | Add-Member -type NoteProperty -name ProxyAddressesAfter -value $AllProxyAddressesStringBefore
 					
