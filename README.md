@@ -7,8 +7,8 @@ Tool intended to manage mail addresses (proxy addresses) for mail objects in Exc
 - RecipientType
 - SkipRecipientCode - true/false or 1/0
 - SkipRecipientReason - ?
-- NewPrimaryProxyAddresss
 - NewProxyAddressPrefix
+- NewPrimaryProxyAddresss
 - NewProxyAddress
 - RemoveProxyAddressPrefix
 - RemoveProxyAddress
@@ -59,3 +59,4 @@ Output will be saved as csv file with semicolon (";") as as delimiter, encoded a
 
 README.md file version history
 0.1 - 2015-04-09 - initial release - mostly based on ideas.txt file
+0.2 - 2015-04-19 - input file structure corrected
