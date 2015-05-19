@@ -83,6 +83,7 @@ Function Manage-MailboxAddresses {
     0.6.5 - 2015-04-09 - file reformated
     0.7.0 - 2015-04-09 - RemoveProxyAddress operation implemented
 	0.7.1 - 2015-05-19 - Small corrections
+    0.7.2 - 2015-05-19 - Tests for RemoveProxyAddresses and SetPrimarySMTPAddress corrected
 	
     
     LICENSE
@@ -278,8 +279,17 @@ Function Manage-MailboxAddresses {
 					$SelectedRecipientTest1Count = (Measure-Object -InputObject $SelectedRecipientTest1).Count
                     
                     Write-Debug "First test for recipient result: $SelectedRecipientTest1"
-					
-					$SelectedRecipientTest2 = $(Get-Recipient $_.NewPrimarySMTPAddress -ErrorAction Stop | Where { $_.RecipientType -eq $RecipientType })
+                    
+                    If ($Operation -eq 'SetSMTPPrimaryAddress') {
+                        
+                        $SelectedRecipientTest2 = $(Get-Recipient $_.NewPrimarySMTPAddress -ErrorAction Stop | Where { $_.RecipientType -eq $RecipientType })
+                        
+                    }
+                    else {
+                        
+                        $SelectedRecipientTest2 = $(Get-Recipient $_.RemoveProxyAddress -ErrorAction Stop | Where { $_.RecipientType -eq $RecipientType })
+                        
+                    }
 					
 					$SelectedRecipientTest2Count = (Measure-Object -InputObject $SelectedRecipientTest2).Count
 					
