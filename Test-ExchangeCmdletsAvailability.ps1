@@ -7,7 +7,10 @@
     .DESCRIPTION
     
     .PARAMETER CmdletForCheck
-    Cmdlet which will be tested
+    Cmdlet which availability will be tested
+    
+    .PARAMETER CheckExchangeServersAvailability
+    Try read list of available Exchange servers
   
     .EXAMPLE
     
@@ -24,7 +27,8 @@
     KEYWORDS: PowerShell,Exchange
    
     VERSIONS HISTORY
-    0.1.0 -  2015-05-25 - Initial release
+    0.1.0 - 2015-05-25 - Initial release
+    0.1.1 - 2015-05-25 - Variable renamed, help updated, simple error handling added
 
     TODO
         
@@ -65,15 +69,24 @@
     
     PROCESS {
         
-        $FunctionAvailable = Test-Path -Path Function:$CmdletForCheck
+        $CmdletAvailable= Test-Path -Path Function:$CmdletForCheck
         
-        if ($FunctionAvailable -and $CheckExchangeServersAvailability) {
+        if ($CmdletAvailable -and $CheckExchangeServersAvailability) {
             
-            $ReturnedServers = Get-ExchangeServer
+            Try {
+                
+                $ReturnedServers = Get-ExchangeServer
+                
+                $ReturnedServerCount = ($ReturnedServers | measure).Count
+                
+                $Result = ($CmdletAvailable -and ($ReturnedServerCount -ge 1))
+            }
             
-            $ReturnedServerCount = ($ReturnedServers | measure).Count
-            
-            $Result = ($FunctionAvailable -and ($ReturnedServerCount -ge 1))
+            Catch {
+                
+                $Result = $false
+                
+            }
             
         }
         Else {
