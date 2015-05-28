@@ -2,7 +2,7 @@
 	
 <#
 	.SYNOPSIS
-	Function intended for veryfying and removing doubled SIP addresses for any mailbox in environment
+	Function intended for SIP addresses for any mailbox in environment
     
 	.DESCRIPTION 
 	
@@ -29,7 +29,8 @@
 	KEYWORDS: PowerShell, Exchange, SIPAddresses, ProxyAddresses, Lync, migration
    
 	VERSIONS HISTORY
-	0.1.0 - 2015-05-27 - Initial release
+	0.1.0 - 2015-05-27 - First version published on GitHub
+	0.1.2 - 2015-05-29 - Switch address to secondary befor remove, post-report corrected
 
 
 	TODO
@@ -65,11 +66,9 @@
 	
 		[parameter(Mandatory = $false)]
 		[String]$LogFileNamePrefix = "SIPs-Removed-",
-		
+	
 		[parameter(Mandatory = $false)]
 		[Bool]$DisplayProgressBar = $false
-		
-	
 		
 	)
 	
@@ -101,95 +100,97 @@
 				$PercentCompleted = [math]::Round(($i / $MailboxesCount) * 100)
 				
 				$StatusText = "Percent completed $PercentCompleted%, currently the recipient {0} is checked. " -f $($_).ToString()
-
+				
 				Write-Progress -Activity "Checking SIP addresses" -Status $StatusText -PercentComplete $PercentCompleted
 				
 			}
 			
-			$CurrentRecipient = $_
+			$CurrentMailbox = $_
 			
-			[String]$MessageText = "Currently addresses for {0} are checked" -f $CurrentRecipient.DisplayName
+			[String]$MessageText = "Currently addresses for {0} are checked" -f $CurrentMailbox.DisplayName
 			
 			Write-Verbose -Message $MessageText
 			
-			$CurrentRecipientSIPAddresses = ($CurrentRecipient | select -ExpandProperty EmailAddresses | where { $_.prefix -match 'SIP' })
+			$CurrentMailboxSIPAddresses = ($CurrentMailbox | select -ExpandProperty EmailAddresses | where { $_.prefix -match 'SIP' })
 			
-			$CurrentRecipientSIPAddressesCount = ($CurrentRecipientSIPAddresses | Measure-Object).Count
+			$CurrentMailboxSIPAddressesCount = ($CurrentMailboxSIPAddresses | Measure-Object).Count
 			
-			if ($CurrentRecipientSIPAddressesCount -gt 1) {
+			if ($CurrentMailboxSIPAddressesCount -gt 1) {
 				
 				$AddToLog = $false
 				
+				[String]$MessageText = "Mailbox with identifier {0} resolved to {1} has assigned {2} SIP addresses." `
+				-f $CurrentMailboxIdentifier, $CurrentMailbox.DisplayName, $CurrentMailboxSIPAddressesCount
 				
-					
-					[String]$MessageText = "Mailbox with identifier {0} resolved to {1} has assigned {2} SIP addresses." `
-					-f $CurrentRecipientIdentifier, $CurrentRecipient.DisplayName, $CurrentRecipientSIPAddressesCount
-					
-					Write-Verbose -Message $MessageText
+				Write-Verbose -Message $MessageText
 
-				
 				$Result = New-Object PSObject
 				
-				$Result | Add-Member -type 'NoteProperty' -name MailboxAlias -value $CurrentRecipient.Alias
+				$Result | Add-Member -type 'NoteProperty' -name MailboxAlias -value $CurrentMailbox.Alias
 				
-				$Result | Add-Member -type 'NoteProperty' -name MailboxDisplayName -value $CurrentRecipient.DisplayName
+				$Result | Add-Member -type 'NoteProperty' -name MailboxDisplayName -value $CurrentMailbox.DisplayName
 				
-				$Result | Add-Member -Type 'NoteProperty' -Name MailboxGuid -Value $CurrentRecipient.Guid
+				$Result | Add-Member -Type 'NoteProperty' -Name MailboxGuid -Value $CurrentMailbox.Guid
 				
-				$Result | Add-Member -Type 'NoteProperty' -Name SIPAddressesBeforeCount -Value $CurrentRecipientSIPAddressesCount
+				$Result | Add-Member -Type 'NoteProperty' -Name SIPAddressesBeforeCount -Value $CurrentMailboxSIPAddressesCount
 				
-				[String]$CurrentSIPAddressesList = [string]::Join(",", $($CurrentRecipientSIPAddresses | ForEach { $_.ProxyAddressString }))
+				[String]$CurrentSIPAddressesList = [string]::Join(",", $($CurrentMailboxSIPAddresses | ForEach { $_.ProxyAddressString }))
 				
 				$Result | Add-Member -Type 'NoteProperty' -Name SIPAddressesBeforeList -Value $CurrentSIPAddressesList
 				
-				$CurrentRecipientSIPAddresses | foreach {
+				$CurrentMailboxSIPAddresses | foreach {
 					
-					$CurrentSIP = $_.AddressString
+					$CurrentSIPObject = $_
 					
-					$AtPosition = $CurrentSIP.IndexOf("@")
+					[String]$CurrentSIPAddressString = $_.AddressString
 					
-					$SIPAddressLenght = $CurrentSIP.Length
+					$AtPosition = $CurrentSIPAddressString.IndexOf("@")
 					
-					[String]$CurrentSIPDomain = $CurrentSIP.Substring($AtPosition + 1, $SIPAddressLenght - ($AtPosition + 1))
+					$SIPAddressLenght = $CurrentSIPAddressString.Length
 					
-					[String]$MessageText = [String]$MessageText = "SIP address {0} is incorrect and will be deleted" `
-					-f $CurrentSIP
-					
+					[String]$CurrentSIPDomain = $CurrentSIPAddressString.Substring($AtPosition + 1, $SIPAddressLenght - ($AtPosition + 1))
 					
 					If ($CurrentSIPDomain -ne $CorrectSIPDomain) {
 						
-						if ($CurrentRecipient.IsPrimaryAddress -eq $true) {
+						if ($CurrentSIPObject.IsPrimaryAddress -eq $true) {
 							
-							$CurrentSIP.ToSecondary()
+							$CurrentSIPObject.ToSecondary() | Out-Null
 							
-						}						
+						}
 						
-						$SIPToRemove = $_.ProxyAddressString
+						$SIPToRemove = $CurrentSIPObject.ProxyAddressString
+						
+						[String]$MessageText = [String]$MessageText = "SIP address {0} is incorrect and will be deleted" `
+						-f $CurrentSIPAddressString
 						
 						Write-Verbose -Message $MessageText
 						
-						Set-Mailbox -Identity $CurrentRecipient.Alias -EmailAddresses @{ remove = $SIPToRemove } -ErrorAction Continue
+						Set-Mailbox -Identity $CurrentMailbox.Alias -EmailAddresses @{ remove = $SIPToRemove } -ErrorAction Continue
 						
-						$AddToLog = $true
+						$AddToLog = $true					
+						
 						
 					}
-					
+				
 					
 				}
 				
-				$CurrentRecipientSIPAddressesAfter  = (Get-Mailbox Identity $($CurrentRecipient.Alias) | Select -ExpandProperty EmailAddresses | where { $_.prefix -match 'SIP' })
+				$CurrentMailboxSIPAddressesAfter = (Get-Mailbox -Identity $CurrentMailbox.Alias | select -ExpandProperty EmailAddresses | where { $_.prefix -match 'SIP' })
 				
-				$CurrentRecipientSIPAddressesCountAfter = ($CurrentRecipientSIPAddressesAfter | Measure-Object).Count
+				$CurrentMailboxSIPAddressesCountAfter = ($CurrentMailboxSIPAddressesAfter | Measure-Object).Count
 				
-				If ($CurrentRecipientSIPAddressesCountAfter -gt 1) {
+				If ($CurrentMailboxSIPAddressesCountAfter -gt 1) {
 					
-					[String]$CurrentSIPAddressesListAfter = [string]::Join(",", $($CurrentRecipientSIPAddresses | ForEach { $_.ProxyAddressString }))
+					[String]$CurrentSIPAddressesListAfter = [string]::Join(",", $($CurrentMailboxSIPAddressesAfter | ForEach {
+						
+						$_.ProxyAddressString
+					}))
 					
 				}
 				
 				Else {
 					
-					$CurrentSIPAddressesListAfter = $CurrentSIPAddressesListAfter.ProxyAddressString
+					$CurrentSIPAddressesListAfter = $CurrentMailboxSIPAddressesAfter.ProxyAddressString
 					
 				}
 				
@@ -229,7 +230,23 @@
 			
 			Try {
 				
-				$Results | Export-CSV -Path $FullLogFilePath -NoTypeInformation -Delimiter ";" -Encoding UTF8 -ErrorAction SilentlyContinue
+				If (($Resulst | measure).Count -lt 1) {
+					
+					
+					$Results | Export-CSV -Path $FullLogFilePath -NoTypeInformation -Delimiter ";" -Encoding UTF8 -ErrorAction SilentlyContinue
+					
+				}
+				Else {
+					
+					$Result = New-Object PSObject
+					
+					$Result | Add-Member -type 'NoteProperty' -name Message -value "Nothing has not changed - no doubled SIPs found."
+										
+					$Results | Export-CSV -Path $FullLogFilePath -NoTypeInformation -Delimiter ";" -Encoding UTF8 -ErrorAction SilentlyContinue
+					
+				}
+				
+				
 				
 			}
 			
@@ -241,9 +258,6 @@
 			
 		}
 		
-		
-		
 	}
-	
 	
 }
