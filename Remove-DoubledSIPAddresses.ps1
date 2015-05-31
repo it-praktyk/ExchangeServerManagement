@@ -1,10 +1,12 @@
 ﻿function Remove-DoubledSIPAddresses {
-	
+    
 <#
 	.SYNOPSIS
-	Function intended for SIP addresses for any mailbox in environment
+	Function intended for verifying and removing doubled SIP addresses from all mailboxes in Exchange Server environment
     
 	.DESCRIPTION 
+    Function intended for verifying and removing doubled SIP addresses from all mailboxes in Exchange Server environment. `
+    Only address in a domain provided in a parameter CorrectSIPDomain will be keep.
 	
 	.PARAMETER CorrectSIPDomain
 	Name of domain for which correct SIPs belong
@@ -13,7 +15,7 @@
 	By default log file is created
 	
 	.PARAMETER LogFileDirectoryPath
-	By default log files are stored in subfolder logs in current path, if logs subfolder is missed will be created
+	By default log files are stored in the subfolder "logs" in current path, if the "logs" subfolder is missed will be created.
 	
 	.PARAMETER LogFileNamePrefix
 	Prefix used for creating rollback files name. Default is "SIPs-Removed-"
