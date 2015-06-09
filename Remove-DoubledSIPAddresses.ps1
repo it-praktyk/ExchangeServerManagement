@@ -1,5 +1,5 @@
 ﻿function Remove-DoubledSIPAddresses {
-    
+	
 <#
     .SYNOPSIS
     Function intended for verifying and removing doubled SIP addresses from all mailboxes in Exchange Server environment
@@ -34,6 +34,7 @@
     0.1.0 - 2015-05-27 - First version published on GitHub
     0.1.2 - 2015-05-29 - Switch address to secondary befor remove, post-report corrected
     0.1.3 - 2015-05-31 - Help updated, a script reformated
+	0.1.4 - 2015-06-09 - Primary SMTP address added to report file
 
     TODO
     - check if Exchange cmdlets are available
@@ -129,8 +130,10 @@
                 $Result = New-Object PSObject
                 
                 $Result | Add-Member -type 'NoteProperty' -name MailboxAlias -value $CurrentMailbox.Alias
-                
-                $Result | Add-Member -type 'NoteProperty' -name MailboxDisplayName -value $CurrentMailbox.DisplayName
+				
+				$Result | Add-Member -type 'NoteProperty' -name MailboxDisplayName -value $CurrentMailbox.DisplayName
+				
+				$Result | Add-Member -type 'NoteProperty' -Name MailboxSMTPPrimaryAddress -Value $CurrentMailbox.PrimarySMTPAddress
                 
                 $Result | Add-Member -Type 'NoteProperty' -Name MailboxGuid -Value $CurrentMailbox.Guid
                 
