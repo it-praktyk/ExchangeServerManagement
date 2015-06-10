@@ -1,5 +1,6 @@
 ﻿function Set-SIPAddressLikePrimarySMTPAddress {
-    
+	
+
 <#
     .SYNOPSIS
     Function intended for verifying and setting SIP addresses equal to PrimarySMTPAddress for all mailboxes in Exchange Server environment
@@ -29,6 +30,7 @@
    
     VERSIONS HISTORY
     0.1.0 - 2015-06-09 - First version published on GitHub, based mostly on Remove-DoubledSIPAddresses v. 0.1.4
+	0.1.1 - 2015-06-10 - Verbose logging corrected, WhatIf implemented
     
     TODO
     - check if Exchange cmdlets are available
@@ -48,11 +50,9 @@
    
 #>
     
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess=$true)]
+
     Param (
-        
-        #[Parameter(Mandatory = $true, Position = 0)]
-        #[String]$CorrectSIPDomain,
         
         [parameter(Mandatory = $false)]
         [Bool]$CreateLogFile = $true,
@@ -79,7 +79,7 @@
         
         Write-Verbose -Message $MessageText
         
-        $Mailboxes = Get-Mailbox -ResultSize Unlimited | Select -Property Alias, DisplayName, RecipientType, EmailAddresses, Guid
+        $Mailboxes = Get-Mailbox -ResultSize Unlimited | Select -Property Alias, DisplayName, RecipientType, EmailAddresses, Guid, PrimarySMTPAddress
         
         $MailboxesCount = ($Mailboxes | measure).Count
         
@@ -116,7 +116,7 @@
                 $AddToLog = $false
                 
                 [String]$MessageText = "Mailbox with identifier {0} resolved to {1} has assigned {2} SIP addresses." `
-                -f $CurrentMailboxIdentifier, $CurrentMailbox.DisplayName, $CurrentMailboxSIPAddressesCount
+                -f $CurrentMailbox.Alias, $CurrentMailbox.DisplayName, $CurrentMailboxSIPAddressesCount
                 
                 Write-Verbose -Message $MessageText
                 
@@ -165,7 +165,7 @@
                         
                         Write-Verbose -Message $MessageText
                         
-                        Set-Mailbox -Identity $CurrentMailbox.Alias -EmailAddresses @{ remove = $SIPToRemove } -ErrorAction Continue
+                        set-mailbox -Identity $CurrentMailbox.Alias -EmailAddresses @{ remove = $SIPToRemove } -ErrorAction Continue
                         
                         $s--
                         
@@ -188,9 +188,12 @@
                         
                         [String]$SIPToAdd = "SIP:{0}" -f $CurrentMailbox.PrimarySMTPAddress
                         
-                        Set-Mailbox -Identity $CurrentMailbox.Alias -EmailAddresses @{ add = $SIPToAdd } -ErrorAction Continue
-                        
-                        $MessageText = "SIP address {0} was set on mailbox {1}" -f $SIPToAdd, $CurrentMailbox.Alias
+                        set-mailbox -Identity $CurrentMailbox.Alias -EmailAddresses @{ add = $SIPToAdd } -ErrorAction Continue
+						
+
+						[String]$MessageText = "SIP address {0} was set on mailbox {1}" -f $SIPToAdd, $CurrentMailbox.Alias
+						
+						Write-Verbose -Message $MessageText
                         
                     }
   
