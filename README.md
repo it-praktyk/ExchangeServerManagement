@@ -1,20 +1,21 @@
 # Set-SIPAddressLikePrimarySMTPAddress
-Function intended for verifying and removing doubled SIP addresses from all mailboxes in Exchange Server environment
 
-.SYNOPSIS
+##SYNOPSIS
 Function intended for verifying and setting SIP addresses equal to PrimarySMTPAddress for all mailboxes in Exchange Server environment
     
-.DESCRIPTION 
+##DESCRIPTION 
 Function intended for verifying and setting SIP addresses equal to PrimarySMTPAddress for all mailboxes in Exchange Server environment,
 any other addresses will be removed, also if more than one SIP address was assigned to a mailbox
+
+##PARAMETERS
         
-.PARAMETER CreateLogFile
+### CreateLogFile
 By default log file is created
     
-.PARAMETER LogFileDirectoryPath
+### LogFileDirectoryPath
 By default log files are stored in the subfolder "logs" in current path, if the "logs" subfolder is missed will be created.
     
-.PARAMETER LogFileNamePrefix
+### LogFileNamePrefix
 Prefix used for creating rollback/report files name. Default is "SIPs-Corrected-"
 
 ##Base repository
