@@ -29,6 +29,7 @@
     VERSIONS HISTORY
     0.1.0 - 2015-05-25 - Initial release
     0.1.1 - 2015-05-25 - Variable renamed, help updated, simple error handling added
+    0.1.2 - 2015-07-06 - Corrected
 
     TODO
         
@@ -91,7 +92,7 @@
         }
         Else {
             
-            $Result = $FunctionAvailable
+            $Result = $CmdletAvailable
             
         }
         
