@@ -21,10 +21,11 @@
 	      
 	.NOTES
 	AUTHOR: Wojciech Sciesinski, wojciech[at]sciesinski[dot]net
-	KEYWORDS: PowerShell
+	KEYWORDS: PowerShell, Exchange, 
    
 	VERSIONS HISTORY
-	0.1.0 -  2015-07-05 - Initial release
+	0.1.0 - 2015-07-05 - Initial release
+    0.1.1 - 2015-07-06 - Help updated, TO DO updated
     
     DEPENDENCIES
     -   Function Test-ExchangeCmdletsAvailability - minimum 0.1.2
@@ -34,8 +35,9 @@
 
 	TODO
     - mail summary report
-    - parse output for application event
+    - parse output for application events 10062
     - Exchange Server version checking (at least 2010 SP1 need to be)
+    - Add support for other errors - https://blogs.it.ox.ac.uk/nexus/2012/06/11/new-mailboxrepairrequest/
 		
 	LICENSE
 	Copyright (C) 2015 Wojciech Sciesinski
