@@ -9,7 +9,19 @@
     White Paper: Database Integrity Checking in Exchange Server 2010 SP1
     https://technet.microsoft.com/en-us/library/hh547017%28v=exchg.141%29.aspx
 	
-  	.PARAMETER FirstParameter
+  	.PARAMETER ComputerName
+	
+	.PARAMETER Database
+	
+	.PARAMETER DetectOnly
+	
+	.PARAMETER CheckProgressEverySeconds
+	
+	.PARAMETER DisplaySummary
+	
+	.PARAMETER DisplayProgressBar
+	
+	.PARAMETER ExpectedDurationTimeMinutes
   
 	.EXAMPLE
      
@@ -26,6 +38,7 @@
 	VERSIONS HISTORY
 	0.1.0 - 2015-07-05 - Initial release
     0.1.1 - 2015-07-06 - Help updated, TO DO updated
+	0.1.2 - 2015-07-15 - Progress bar added, verbose messages partially suppressed, help next update
     
     DEPENDENCIES
     -   Function Test-ExchangeCmdletsAvailability - minimum 0.1.2
@@ -74,7 +87,13 @@
         [Int]$CheckProgressEverySeconds = 30,
         
         [parameter(Mandatory = $false)]
-        [switch]$DisplaySummary = $false
+		[switch]$DisplaySummary = $false,
+	
+		[parameter(Mandatory = $false)]
+		[switch]$DisplayProgressBar = $true,
+	
+		[Parameter(mandatory = $false, Position = 3)]
+		[int]$ExpectedDurationTimeMinutes = 15
                 
     )
     
@@ -102,7 +121,7 @@
         }
         
         
-        #Test if target Exchange server is availble need to be add (?)
+        #Test if target Exchange server is available need to be add (?)
         
         If ($Database -eq 'All') {
             
@@ -126,7 +145,7 @@
                     
                     $waserror = $true
                     
-                    [String]$MessageText = "Database {0} is not corrently active on {1} and can't be checked" -f $CurrentDatabase, $ComputerNetBIOSName
+                    [String]$MessageText = "Database {0} is not currently active on {1} and can't be checked" -f $CurrentDatabase, $ComputerNetBIOSName
                     Write-Error -Message $MessageText
                     
                 }
@@ -167,13 +186,13 @@
             
             $StartTimeForDatabase = Get-Date
             
-            $CurrentRepairRequest = New-MailboxRepairRequest -Database $_.Name -CorruptionType $($CorruptionType -join ",") -DetectOnly:$DetectOnly
+            $CurrentRepairRequest = New-MailboxRepairRequest -Database $_.Name -CorruptionType "SearchFolder","AggregateCounts","ProvisionedFolder","FolderView","MessagePTagCn" -DetectOnly:$DetectOnly
             
             Start-Sleep -Seconds 1
             
             do {
                 
-                $StartRepairEvent = Get-EventsBySource -ComputerName $ComputerFQDNName -LogName "Application" -ProviderName "MSExchangeIS Mailbox Store" -EventID 10059 -StartTime $StartTimeForDatabase
+                $StartRepairEvent = Get-EventsBySource -ComputerName $ComputerFQDNName -LogName "Application" -ProviderName "MSExchangeIS Mailbox Store" -EventID 10059 -StartTime $StartTimeForDatabase -Verbose:$false
                 
                 $StartRepairEventFound = (($StartRepairEvent | measure).count -eq 1)
                 
@@ -193,18 +212,41 @@
                 
             }
             while ($StartRepairEventFound -eq $false)
-            
-            Start-Sleep -Seconds 1
+			
+
+			Start-Sleep -Seconds 1
+			
+			[int]$i = $CheckProgressEverySeconds
             
             do {
                 
-                $StopRepairEvent = Get-EventsBySource -ComputerName $ComputerFQDNName -LogName "Application" -ProviderName "MSExchangeIS Mailbox Store" -EventID 10048 -StartTime $StartTimeForDatabase
+                $StopRepairEvent = Get-EventsBySource -ComputerName $ComputerFQDNName -LogName "Application" -ProviderName "MSExchangeIS Mailbox Store" -EventID 10048 -StartTime $StartTimeForDatabase -Verbose:$false
                 
                 $StopRepairEventFound = (($StopRepairEvent | measure).count -eq 1)
-                
-                If (-not $StopRepairEventFound) {
-                    
-                    Start-Sleep -Seconds $CheckProgressEverySeconds
+				
+
+				If (-not $StopRepairEventFound) {
+					
+					If ($DisplayProgressBar) {
+						
+						[String]$MessageText = "Database {0} repair request  is in progress." -f $_.Name
+						
+						Write-Progress -Activity $MessageText -Status "Completion percentage is only approximate." -PercentComplete ( ($i /  ($ExpectedDurationTimeMinutes * 60)) * 100)
+						
+						if (($i += $CheckProgressEverySeconds ) -ge ($ExpectedDurationTimeMinutes * 60)) {
+							
+							$i = $CheckProgressEverySeconds
+						}
+						Else {
+							
+							$i += $CheckProgressEverySeconds
+							
+						}
+						
+					}
+					
+
+					Start-Sleep -Seconds $CheckProgressEverySeconds
                     
                 }
                 Else {
@@ -215,7 +257,7 @@
                     
                     If ($DisplaySummary) {
                         
-                        $CorruptionFoundEvents = Get-EventsBySource -ComputerName $ComputerFQDNName -LogName "Application" -ProviderName "MSExchangeIS Mailbox Store" -EventID 10062 -StartTime $StartTimeForDatabase
+                        $CorruptionFoundEvents = Get-EventsBySource -ComputerName $ComputerFQDNName -LogName "Application" -ProviderName "MSExchangeIS Mailbox Store" -EventID 10062 -StartTime $StartTimeForDatabase -Verbose:$false
                         
                         $CorruptionFoundEventsCount = ($CorruptionFoundEvents | measure).count
                         
