@@ -5,10 +5,17 @@
 	Function intended for 
    
 	.DESCRIPTION
-        
+
+    The Exchange Team Blog: New Support Policy for Repaired Exchange Databases
+    http://blogs.technet.com/b/exchange/archive/2015/05/01/new-support-policy-for-repaired-exchange-databases.aspx
+    
     White Paper: Database Integrity Checking in Exchange Server 2010 SP1
     https://technet.microsoft.com/en-us/library/hh547017%28v=exchg.141%29.aspx
-	
+       
+    Nexus: News, Messages about messaging, Matthew Gaskin blog
+    Using the New-MailboxRepairRequest cmdlet
+    https://blogs.it.ox.ac.uk/nexus/2012/06/11/new-mailboxrepairrequest/
+ 	
   	.PARAMETER ComputerName
 	
 	.PARAMETER Database
@@ -39,6 +46,7 @@
 	0.1.0 - 2015-07-05 - Initial release
     0.1.1 - 2015-07-06 - Help updated, TO DO updated
 	0.1.2 - 2015-07-15 - Progress bar added, verbose messages partially suppressed, help next update
+    0.1.3 - 2015-08-11 - Additional checks added to verify provided Exchange server, help and TO DO updated
     
     DEPENDENCIES
     -   Function Test-ExchangeCmdletsAvailability - minimum 0.1.2
@@ -47,10 +55,18 @@
         https://github.com/it-praktyk/Get-EvenstBySource
 
 	TODO
-    - mail summary report
+    - additional events need to be checked
+        a) 10045 -  The database repair request failed for provisioned folders. This event ID is created in conjunction with event ID 10049
+        b) 10049 -  The mailbox or database repair request failed because Exchange encountered a problem with the database or another task 
+                    is running against the database. (Fix for this is ESEUTIL then contact Microsoft Product Support Services)
+        c) 10050 -  The database repair request couldn’t run against the database because the database doesn’t support the corruption types 
+                    specified in the command. This issue can occur when you run the command from a server that’s running a later version 
+                    of Exchange than the database you’re scanning.
+    
+        d) 10051 -  The database repair request was cancelled because the database was dismounted.
+    - store and/or mail summary report
     - parse output for application events 10062
     - Exchange Server version checking (at least 2010 SP1 need to be)
-    - Add support for other errors - https://blogs.it.ox.ac.uk/nexus/2012/06/11/new-mailboxrepairrequest/
 		
 	LICENSE
 	Copyright (C) 2015 Wojciech Sciesinski
@@ -74,6 +90,7 @@
         [parameter(Mandatory = $false)]
         [String]$ComputerName = 'localhost',
         
+        #This parameter is not currently used - 
         [parameter(Mandatory = $false)]
         $CorruptionType = @("SearchFolder", "AggregateCounts", "ProvisionedFolder", "FolderView", "MessagePTagCn"),
         
@@ -84,7 +101,7 @@
         [switch]$DetectOnly = $false,
         
         [parameter(Mandatory = $false)]
-        [Int]$CheckProgressEverySeconds = 30,
+        [Int]$CheckProgressEverySeconds = 120,
         
         [parameter(Mandatory = $false)]
 		[switch]$DisplaySummary = $false,
@@ -118,10 +135,45 @@
         If ((Test-ExchangeCmdletsAvailability) -ne $true) {
             
             Throw "The function Invoke-MailboxDatabasesReapairs need to be run using Exchange Management Shell"
+            
         }
         
+        $MailboxServer = (Get-MailboxServer -Identity $ComputerNetBIOSName)
         
-        #Test if target Exchange server is available need to be add (?)
+        $MailboxServerCount = ($ExchangeServer | Measure ).Count
+        
+        
+        If ($MailboxServerCount -gt 1) {
+            
+            [String]$MessageText = "You can use this function to perform actions at only one server at once."
+            
+            Throw $MessageText
+            
+        }
+        Elseif ($MailboxServerCount -ne 1) {
+            
+            "Server {0} is not a Exchange mailbox server" -f $MailboxServer
+            
+            Throw $MessageText
+        }
+        
+        #Determine Exchange server version
+        #List of build version: https://technet.microsoft.com/library/hh135098.aspx
+        Try {
+            
+            $MailboxServerVersion = Invoke-Command -ComputerName $MaiboxServer -ScriptBlock { Get-Command Exsetup.exe | select FileversionInfo }
+            
+            [Version]$MailboxServerVersion = ($ExchangeServerVersion.FileVersionInfo).FileVersion
+            
+        }
+        Catch {
+            
+            [String]$MessageText = "Server {0} is not reachable or PowerShell remoting is not enabled on it."
+            
+            #Decission based on 
+            
+        }
+
         
         If ($Database -eq 'All') {
             
