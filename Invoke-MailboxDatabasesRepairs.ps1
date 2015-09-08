@@ -1,22 +1,22 @@
 ﻿function Invoke-MailboxDatabasesRepairs {
     
-	<#
-	.SYNOPSIS
-	Function intended for performing checks and repairs operation on Exchange Server 2010 SP1 (or newer) mailbox databases
+    <#
+    .SYNOPSIS
+    Function intended for performing checks and repairs operation on Exchange Server 2010 SP1 (or newer) mailbox databases
    
-	.DESCRIPTION
+    .DESCRIPTION
     Function invokes New-MailboxDatabaseRepair cmdlet for all active mailbox database copies on server. Mailbox databases can be also
     provided by name in function parameter
 
-	The Exchange Team Blog: New Support Policy for Repaired Exchange Databases
-	http://blogs.technet.com/b/exchange/archive/2015/05/01/new-support-policy-for-repaired-exchange-databases.aspx
-	
-	White Paper: Database Integrity Checking in Exchange Server 2010 SP1
-	https://technet.microsoft.com/en-us/library/hh547017%28v=exchg.141%29.aspx
-	   
-	Nexus: News, Messages about messaging, Matthew Gaskin blog
-	Using the New-MailboxRepairRequest cmdlet
-	https://blogs.it.ox.ac.uk/nexus/2012/06/11/new-mailboxrepairrequest/
+    The Exchange Team Blog: New Support Policy for Repaired Exchange Databases
+    http://blogs.technet.com/b/exchange/archive/2015/05/01/new-support-policy-for-repaired-exchange-databases.aspx
+    
+    White Paper: Database Integrity Checking in Exchange Server 2010 SP1
+    https://technet.microsoft.com/en-us/library/hh547017%28v=exchg.141%29.aspx
+       
+    Nexus: News, Messages about messaging, Matthew Gaskin blog
+    Using the New-MailboxRepairRequest cmdlet
+    https://blogs.it.ox.ac.uk/nexus/2012/06/11/new-mailboxrepairrequest/
     
     Possible events for Exchange Server 2010 SP1 and newer
     
@@ -25,33 +25,33 @@
     b) 10059 -  A database-level repair request started.
 
     -errors
-     a) 10045 -	The database repair request failed for provisioned folders. This event ID is created in conjunction with event ID 10049
-	 b) 10049 -	The mailbox or database repair request failed because Exchange encountered a problem with the database or another task 
-				is running against the database. (Fix for this is ESEUTIL then contact Microsoft Product Support Services)
-	 c) 10050 -	The database repair request couldn’t run against the database because the database doesn’t support the corruption types 
-				specified in the command. This issue can occur when you run the command from a server that’s running a later version 
-				of Exchange than the database you’re scanning.
-    d) 10051 -	The database repair request was cancelled because the database was dismounted.
-	
-	.PARAMETER ComputerName
-	Exchange server for which actions should be performed - need to be a mailbox server
+     a) 10045 - The database repair request failed for provisioned folders. This event ID is created in conjunction with event ID 10049
+     b) 10049 - The mailbox or database repair request failed because Exchange encountered a problem with the database or another task 
+                is running against the database. (Fix for this is ESEUTIL then contact Microsoft Product Support Services)
+     c) 10050 - The database repair request couldn’t run against the database because the database doesn’t support the corruption types 
+                specified in the command. This issue can occur when you run the command from a server that’s running a later version 
+                of Exchange than the database you’re scanning.
+    d) 10051 -  The database repair request was cancelled because the database was dismounted.
     
-	.PARAMETER Database
+    .PARAMETER ComputerName
+    Exchange server for which actions should be performed - need to be a mailbox server
+    
+    .PARAMETER Database
     Database identifier - e.g. name - for which action need to be performed. If more than one identifiers need to be separated by commas
-	
-	.PARAMETER DetectOnly
+    
+    .PARAMETER DetectOnly
     Set to TRUE if any repair action shouldn't be started
-	
+    
     .PARAMETER DisplayProgressBar
     If function is used in interactive mode progress bar can be displayed to provide overall information that something is happend. 
     
-	.PARAMETER CheckProgressEverySeconds
-    	
-	.PARAMETER DisplaySummary
-	
-	.PARAMETER ExpectedDurationTimeMinutes
-	
-	.PARAMETER CreateReportFile
+    .PARAMETER CheckProgressEverySeconds
+        
+    .PARAMETER DisplaySummary
+    
+    .PARAMETER ExpectedDurationTimeMinutes
+    
+    .PARAMETER CreateReportFile
     By default report file is created
     
     .PARAMETER ReportFileDirectoryPath
@@ -70,58 +70,59 @@
     
     .PARAMETER BreakOnReportCreationError
     
-	.EXAMPLE
-	
-	[PS] >Invoke-MailboxDatabasesRepairs -ComputerName XXXXXXMBX03 -Database All -DisplaySummary:$true -ExpectedDurationTimeMinutes 120 -DetectOnly:$true
-	 
-	.LINK
-	https://github.com/it-praktyk/Invoke-MailboxDatabasesRepairs
-	
-	.LINK
-	https://www.linkedin.com/in/sciesinskiwojciech
-		  
-	.NOTES
-	AUTHOR: Wojciech Sciesinski, wojciech[at]sciesinski[dot]net
-	KEYWORDS: PowerShell, Exchange, New-MailboxRepairRequest
+    .EXAMPLE
+    
+    [PS] >Invoke-MailboxDatabasesRepairs -ComputerName XXXXXXMBX03 -Database All -DisplaySummary:$true -ExpectedDurationTimeMinutes 120 -DetectOnly:$true
+     
+    .LINK
+    https://github.com/it-praktyk/Invoke-MailboxDatabasesRepairs
+    
+    .LINK
+    https://www.linkedin.com/in/sciesinskiwojciech
+          
+    .NOTES
+    AUTHOR: Wojciech Sciesinski, wojciech[at]sciesinski[dot]net
+    KEYWORDS: PowerShell, Exchange, New-MailboxRepairRequest
    
-	VERSIONS HISTORY
-	0.1.0 - 2015-07-05 - Initial release
-	0.1.1 - 2015-07-06 - Help updated, TO DO updated
-	0.1.2 - 2015-07-15 - Progress bar added, verbose messages partially suppressed, help next update
-	0.1.3 - 2015-08-11 - Additional checks added to verify provided Exchange server, help and TO DO updated
-	0.2.0 - 2015-08-31 - Corrected checking of Exchange version, output redirected to per mailbox database reports
+    VERSIONS HISTORY
+    0.1.0 - 2015-07-05 - Initial release
+    0.1.1 - 2015-07-06 - Help updated, TO DO updated
+    0.1.2 - 2015-07-15 - Progress bar added, verbose messages partially suppressed, help next update
+    0.1.3 - 2015-08-11 - Additional checks added to verify provided Exchange server, help and TO DO updated
+    0.2.0 - 2015-08-31 - Corrected checking of Exchange version, output redirected to per mailbox database reports
     0.3.0 - 2015-09-04 - Added support for Exchange 2013, added support for database repair errors
-	0.3.1 - 2015-09-05 - Corrected but still required testing on Exchange 2013
-	0.4.0 - 2015-09-07 - Support for Exchange 2013 removed, help partially updated, report creation partially implemented
+    0.3.1 - 2015-09-05 - Corrected but still required testing on Exchange 2013
+    0.4.0 - 2015-09-07 - Support for Exchange 2013 removed, help partially updated, report creation partially implemented
                          TODO section updated
-	
-	DEPENDENCIES
-	-	Function Test-ExchangeCmdletsAvailability - minimum 0.1.2
-		https://github.com/it-praktyk/Test-ExchangeCmdletsAvailability
-	-	Function Function Get-EventsBySource - minimum 0.3.2
-		https://github.com/it-praktyk/Get-EvenstBySource
-	-	Function New-OutputFileNameFullPath - minimum 0.2.0
-		https://github.com/it-praktyk/New-OutputFileNameFullPath
+    0.4.1 - 2015-09-08 - function reformated
+    
+    DEPENDENCIES
+    -   Function Test-ExchangeCmdletsAvailability - minimum 0.1.2
+        https://github.com/it-praktyk/Test-ExchangeCmdletsAvailability
+    -   Function Function Get-EventsBySource - minimum 0.3.2
+        https://github.com/it-praktyk/Get-EvenstBySource
+    -   Function New-OutputFileNameFullPath - minimum 0.2.0
+        https://github.com/it-praktyk/New-OutputFileNameFullPath
 
-	TODO
-	- store and/or mail summary report
-	- parse output for application events 10062
-	- Current time and timezone need to be compared between localhost and destination host to avoid mistakes
+    TODO
+    - store and/or mail summary report
+    - parse output for application events 10062
+    - Current time and timezone need to be compared between localhost and destination host to avoid mistakes
     - exit code return need to be implemented
-		
-	LICENSE
-	Copyright (C) 2015 Wojciech Sciesinski
-	This program is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-	GNU General Public License for more details.
-	You should have received a copy of the GNU General Public License
-	along with this program. If not, see <http://www.gnu.org/licenses/>
-	
+        
+    LICENSE
+    Copyright (C) 2015 Wojciech Sciesinski
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+    GNU General Public License for more details.
+    You should have received a copy of the GNU General Public License
+    along with this program. If not, see <http://www.gnu.org/licenses/>
+    
 #>
     
     [cmdletbinding()]
@@ -388,16 +389,16 @@
             
             
 <#
-			#This part is temporary (disabled) due that Exchange 2013 is using other events to 
-			
+            #This part is temporary (disabled) due that Exchange 2013 is using other events to 
+            
             elseif (($MailboxServerVersion.Major -eq 15)) {
                 
                 # $CurrentRepairRequest = New-MailboxRepairRequest -Database $_.Name -CorruptionType SearchFolder, FolderView, AggregateCounts, ProvisionedFolder, ReplState, MessagePTAGCn, MessageID, RuleMessageClass, RestrictionFolder, FolderACL, UniqueMidIndex, CorruptJunkRule, MissingSpecialFolders, DropAllLazyIndexes, ImapID, ScheduledCheck, Extension1, Extension2, Extension3, Extension4, Extension5 -DetectOnly:$DetectOnly
-				
-				$CurrentRepairRequest = New-MailboxRepairRequest -Database $_.Name -CorruptionType "SearchFolder", "AggregateCounts", "ProvisionedFolder", "FolderView", "MessagePTagCn" -DetectOnly:$DetectOnly -Force
+                
+                $CurrentRepairRequest = New-MailboxRepairRequest -Database $_.Name -CorruptionType "SearchFolder", "AggregateCounts", "ProvisionedFolder", "FolderView", "MessagePTagCn" -DetectOnly:$DetectOnly -Force
                 
             }
-			
+            
 
             elseif (($MailboxServerVersion.Major -eq 16)) {
                 
@@ -406,7 +407,7 @@
                 Throw $MessageText
                 
             }
-			
+            
 #>
             else {
                 
@@ -526,7 +527,7 @@
                     
                     If ($DisplayProgressBar) {
                         
-                        [String]$MessageText = "Database {0} repair request	 is in progress." -f $_.Name
+                        [String]$MessageText = "Database {0} repair request  is in progress." -f $_.Name
                         
                         Write-Progress -Activity $MessageText -Status "Completion percentage is only confirmation that something is happening :-)" -PercentComplete (($i / ($ExpectedDurationTimeMinutes * 60)) * 100)
                         
@@ -585,66 +586,66 @@ Function New-OutputFileNameFullPath {
     
 <#
 
-	.SYNOPSIS
-	Function intended for preparing filename for output files like reports or logs
+    .SYNOPSIS
+    Function intended for preparing filename for output files like reports or logs
    
-	.DESCRIPTION
-	Function intended for preparing filename for output files like reports or logs based on prefix, middle name part, date, etc. with verification
-	
-	.PARAMETER CreateOutputFileDirectory
-	
-	.PARAMETER OutputFileDirectoryPath
-	
-	.PARAMETER OutputFileNamePrefix
-	
-	.PARAMETER OutputFileNameMidPart
-	
-	.PARAMETER IncludeDateTimePartInFileName
-	
-	.PARAMETER DateTimePartInFileName
-	
-	.PARAMETER OutputFileNameExtension
-	
-	.PARAMETER CheckIfOutputFileExist
-	
-	.PARAMETER BreakIfError
+    .DESCRIPTION
+    Function intended for preparing filename for output files like reports or logs based on prefix, middle name part, date, etc. with verification
+    
+    .PARAMETER CreateOutputFileDirectory
+    
+    .PARAMETER OutputFileDirectoryPath
+    
+    .PARAMETER OutputFileNamePrefix
+    
+    .PARAMETER OutputFileNameMidPart
+    
+    .PARAMETER IncludeDateTimePartInFileName
+    
+    .PARAMETER DateTimePartInFileName
+    
+    .PARAMETER OutputFileNameExtension
+    
+    .PARAMETER CheckIfOutputFileExist
+    
+    .PARAMETER BreakIfError
 
-	.EXAMPLE
-	
-	[PS] > New-OutputFileNameFullPath 
-	 
-	.LINK
-	https://github.com/it-praktyk/New-OutputFileNameFullPath
-	
-	.LINK
-	https://www.linkedin.com/in/sciesinskiwojciech
-		  
-	.NOTES
-	AUTHOR: Wojciech Sciesinski, wojciech[at]sciesinski[dot]net
-	KEYWORDS: PowerShell
+    .EXAMPLE
+    
+    [PS] > New-OutputFileNameFullPath 
+     
+    .LINK
+    https://github.com/it-praktyk/New-OutputFileNameFullPath
+    
+    .LINK
+    https://www.linkedin.com/in/sciesinskiwojciech
+          
+    .NOTES
+    AUTHOR: Wojciech Sciesinski, wojciech[at]sciesinski[dot]net
+    KEYWORDS: PowerShell
    
-	VERSIONS HISTORY
-	0.1.0 - 2015-09-01 - Initial release
+    VERSIONS HISTORY
+    0.1.0 - 2015-09-01 - Initial release
     0.1.1 - 2015-09-01 - Minor update
     0.2.0 - 2015-09-08 - Corrected, function renamed to New-OutputFileNameFullPath from New-ReportFileNameFullPath 
     
-	TODO
-	Update help
+    TODO
+    Update help
 
-		
-	LICENSE
-	Copyright (C) 2015 Wojciech Sciesinski
-	This program is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-	GNU General Public License for more details.
-	You should have received a copy of the GNU General Public License
-	along with this program. If not, see <http://www.gnu.org/licenses/>
-	
+        
+    LICENSE
+    Copyright (C) 2015 Wojciech Sciesinski
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+    GNU General Public License for more details.
+    You should have received a copy of the GNU General Public License
+    along with this program. If not, see <http://www.gnu.org/licenses/>
+    
 #>
     
     [cmdletbinding()]
@@ -956,50 +957,50 @@ Function Parse10062Events {
 Function Test-ExchangeCmdletsAvailability {
     
 <#
-	.SYNOPSIS
-	Function intended for veryfing if in current PowerShell session Exchange cmdlets and Exchange servers are available
+    .SYNOPSIS
+    Function intended for veryfing if in current PowerShell session Exchange cmdlets and Exchange servers are available
    
-	.DESCRIPTION
-	
-	.PARAMETER CmdletForCheck
-	Cmdlet which availability will be tested
-	
-	.PARAMETER CheckExchangeServersAvailability
-	Try read list of available Exchange servers
+    .DESCRIPTION
+    
+    .PARAMETER CmdletForCheck
+    Cmdlet which availability will be tested
+    
+    .PARAMETER CheckExchangeServersAvailability
+    Try read list of available Exchange servers
   
-	.EXAMPLE
-	
-	Test-ExchangeCmdletsAvailability -CmdletForCheck Get-Mailbox
-	 
-	.LINK
-	https://github.com/it-praktyk/Test-ExchangeCmdletsAvailability
-	
-	.LINK
-	https://www.linkedin.com/in/sciesinskiwojciech
-		  
-	.NOTES
-	AUTHOR: Wojciech Sciesinski, wojciech[at]sciesinski[dot]net
-	KEYWORDS: PowerShell,Exchange
+    .EXAMPLE
+    
+    Test-ExchangeCmdletsAvailability -CmdletForCheck Get-Mailbox
+     
+    .LINK
+    https://github.com/it-praktyk/Test-ExchangeCmdletsAvailability
+    
+    .LINK
+    https://www.linkedin.com/in/sciesinskiwojciech
+          
+    .NOTES
+    AUTHOR: Wojciech Sciesinski, wojciech[at]sciesinski[dot]net
+    KEYWORDS: PowerShell,Exchange
    
-	VERSIONS HISTORY
-	0.1.0 - 2015-05-25 - Initial release
-	0.1.1 - 2015-05-25 - Variable renamed, help updated, simple error handling added
-	0.1.2 - 2015-07-06 - Corrected
+    VERSIONS HISTORY
+    0.1.0 - 2015-05-25 - Initial release
+    0.1.1 - 2015-05-25 - Variable renamed, help updated, simple error handling added
+    0.1.2 - 2015-07-06 - Corrected
 
-	TODO
-		
-	LICENSE
-	Copyright (C) 2015 Wojciech Sciesinski
-	This program is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-	GNU General Public License for more details.
-	You should have received a copy of the GNU General Public License
-	along with this program. If not, see <http://www.gnu.org/licenses/>
+    TODO
+        
+    LICENSE
+    Copyright (C) 2015 Wojciech Sciesinski
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+    GNU General Public License for more details.
+    You should have received a copy of the GNU General Public License
+    along with this program. If not, see <http://www.gnu.org/licenses/>
    
 #>
     
@@ -1061,58 +1062,58 @@ Function Test-ExchangeCmdletsAvailability {
 
 Function Get-EventsBySource {
 <#
-	.SYNOPSIS
-	Function intended for remote gathering events data 
+    .SYNOPSIS
+    Function intended for remote gathering events data 
   
-	.PARAMETER ComputerName
+    .PARAMETER ComputerName
    
-	.PARAMETER LogName
-	
-	.PARAMETER ProviderName
-	
-	.PARAMETER EventID
-	
-	.PARAMETER ConcatenateMessageLines
-	
-	.PARAMETER ConcatenatedLinesSeparator
-	
-	.PARAMETER MessageCharsAmount
-	
-	 
-	.EXAMPLE
-	Get-EventsBySource
-		 
-	.LINK
-	https://github.com/it-praktyk/Get-EvenstBySource
-	
-	.LINK
-	https://www.linkedin.com/in/sciesinskiwojciech
-		  
-	.NOTES
+    .PARAMETER LogName
+    
+    .PARAMETER ProviderName
+    
+    .PARAMETER EventID
+    
+    .PARAMETER ConcatenateMessageLines
+    
+    .PARAMETER ConcatenatedLinesSeparator
+    
+    .PARAMETER MessageCharsAmount
+    
+     
+    .EXAMPLE
+    Get-EventsBySource
+         
+    .LINK
+    https://github.com/it-praktyk/Get-EvenstBySource
+    
+    .LINK
+    https://www.linkedin.com/in/sciesinskiwojciech
+          
+    .NOTES
    
-	AUTHOR: Wojciech Sciesinski, wojciech.sciesinski@atos.net
-	KEYWORDS: Windows, Event logs
-	VERSION HISTORY
-	0.3.1 - 2015-07-03 - Support for time span corrected, the first version published on GitHub
-	0.3.2 - 2015-07-05 - Help updated, function corrected
-	
+    AUTHOR: Wojciech Sciesinski, wojciech.sciesinski@atos.net
+    KEYWORDS: Windows, Event logs
+    VERSION HISTORY
+    0.3.1 - 2015-07-03 - Support for time span corrected, the first version published on GitHub
+    0.3.2 - 2015-07-05 - Help updated, function corrected
+    
 
-	TODO
-	- help update needed
-	
-		
-	LICENSE
-	Copyright (C) 2015 Wojciech Sciesinski
-	This program is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-	GNU General Public License for more details.
-	You should have received a copy of the GNU General Public License
-	along with this program. If not, see <http://www.gnu.org/licenses/>
+    TODO
+    - help update needed
+    
+        
+    LICENSE
+    Copyright (C) 2015 Wojciech Sciesinski
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+    GNU General Public License for more details.
+    You should have received a copy of the GNU General Public License
+    along with this program. If not, see <http://www.gnu.org/licenses/>
    
 #>
     
