@@ -2,9 +2,11 @@
     
 	<#
 	.SYNOPSIS
-	Function intended for 
+	Function intended for performing checks and repairs operation on Exchange Server 2010 SP1 (or newer) mailbox databases
    
 	.DESCRIPTION
+    Function invokes New-MailboxDatabaseRepair cmdlet for all active mailbox database copies on server. Mailbox databases can be also
+    provided by name in function parameter
 
 	The Exchange Team Blog: New Support Policy for Repaired Exchange Databases
 	http://blogs.technet.com/b/exchange/archive/2015/05/01/new-support-policy-for-repaired-exchange-databases.aspx
@@ -16,7 +18,7 @@
 	Using the New-MailboxRepairRequest cmdlet
 	https://blogs.it.ox.ac.uk/nexus/2012/06/11/new-mailboxrepairrequest/
     
-    Possible events
+    Possible events for Exchange Server 2010 SP1 and newer
     
     - normal operation
     a) 10048 -  The mailbox or database repair request completed successfully.
@@ -32,16 +34,20 @@
     d) 10051 -	The database repair request was cancelled because the database was dismounted.
 	
 	.PARAMETER ComputerName
-	
+	Exchange server for which actions should be performed - need to be a mailbox server
+    
 	.PARAMETER Database
+    Database identifier - e.g. name - for which action need to be performed. If more than one identifiers need to be separated by commas
 	
 	.PARAMETER DetectOnly
+    Set to TRUE if any repair action shouldn't be started
 	
+    .PARAMETER DisplayProgressBar
+    If function is used in interactive mode progress bar can be displayed to provide overall information that something is happend. 
+    
 	.PARAMETER CheckProgressEverySeconds
-	
+    	
 	.PARAMETER DisplaySummary
-	
-	.PARAMETER DisplayProgressBar
 	
 	.PARAMETER ExpectedDurationTimeMinutes
 	
@@ -52,10 +58,18 @@
     By default report files are stored in subfolder "reports" in current path, if "reports" subfolder is missed will be created
     
     .PARAMETER ReportFileNamePrefix
-    Prefix used for creating errors report files name. Default is "Report-" 
-
-	.
-  
+    Prefix used for creating report files name. Default is "MBDBs_IntegrityChecks_<SERVER_NETBIOS_NAME>"
+    
+    .PARAMETER ReportFileNameMidPart
+    
+    .PARAMETER IncludeDateTimePartInReportFileName
+    
+    .PARAMETER DateTimePartInFileName
+    
+    .PARAMETER ReportFileNameExtension
+    
+    .PARAMETER BreakOnReportCreationError
+    
 	.EXAMPLE
 	
 	[PS] >Invoke-MailboxDatabasesRepairs -ComputerName XXXXXXMBX03 -Database All -DisplaySummary:$true -ExpectedDurationTimeMinutes 120 -DetectOnly:$true
@@ -77,29 +91,23 @@
 	0.1.3 - 2015-08-11 - Additional checks added to verify provided Exchange server, help and TO DO updated
 	0.2.0 - 2015-08-31 - Corrected checking of Exchange version, output redirected to per mailbox database reports
     0.3.0 - 2015-09-04 - Added support for Exchange 2013, added support for database repair errors
-	0.3.1 - 2015-09-07 - Corrected but still required testing
+	0.3.1 - 2015-09-05 - Corrected but still required testing on Exchange 2013
+	0.4.0 - 2015-09-07 - Support for Exchange 2013 removed, help partially updated, report creation partially implemented
+                         TODO section updated
 	
 	DEPENDENCIES
 	-	Function Test-ExchangeCmdletsAvailability - minimum 0.1.2
 		https://github.com/it-praktyk/Test-ExchangeCmdletsAvailability
 	-	Function Function Get-EventsBySource - minimum 0.3.2
 		https://github.com/it-praktyk/Get-EvenstBySource
-	-	Function New-ReportFileNameFullPath - minimum 0.1.1
-		https://github.com/it-praktyk/New-ReportFileNameFullPath
+	-	Function New-OutputFileNameFullPath - minimum 0.2.0
+		https://github.com/it-praktyk/New-OutputFileNameFullPath
 
 	TODO
-	- additional events need to be checked
-		a) 10045 -	The database repair request failed for provisioned folders. This event ID is created in conjunction with event ID 10049
-		b) 10049 -	The mailbox or database repair request failed because Exchange encountered a problem with the database or another task 
-					is running against the database. (Fix for this is ESEUTIL then contact Microsoft Product Support Services)
-		c) 10050 -	The database repair request couldn’t run against the database because the database doesn’t support the corruption types 
-					specified in the command. This issue can occur when you run the command from a server that’s running a later version 
-					of Exchange than the database you’re scanning.
-	
-		d) 10051 -	The database repair request was cancelled because the database was dismounted.
 	- store and/or mail summary report
 	- parse output for application events 10062
 	- Current time and timezone need to be compared between localhost and destination host to avoid mistakes
+    - exit code return need to be implemented
 		
 	LICENSE
 	Copyright (C) 2015 Wojciech Sciesinski
@@ -120,13 +128,15 @@
     param
     (
         [parameter(Mandatory = $false)]
+        [alias("server")]
         [String]$ComputerName = 'localhost',
         
         #This parameter is not currently used - 
+        #[parameter(Mandatory = $false)]
+        #$CorruptionType = @("SearchFolder", "AggregateCounts", "ProvisionedFolder", "FolderView", "MessagePTagCn"),
+        
         [parameter(Mandatory = $false)]
-        $CorruptionType = @("SearchFolder", "AggregateCounts", "ProvisionedFolder", "FolderView", "MessagePTagCn"),
-        [parameter(Mandatory = $false)]
-        $Database = "All",
+        [String[]]$Database = 'All',
         [parameter(Mandatory = $false)]
         [switch]$DetectOnly = $false,
         [parameter(Mandatory = $false)]
@@ -138,20 +148,22 @@
         [Parameter(mandatory = $false)]
         [int]$ExpectedDurationTimeMinutes = 15,
         [parameter(Mandatory = $false, ParameterSetName = "Reports")]
-        [ValidateSet("CreatePerDatabase", "CreatePerServer")]
+        [ValidateSet("CreatePerServer", "CreatePerDatabase", "None")]
         [String]$CreateReportFile = "CreatePerServer",
         [parameter(Mandatory = $false, ParameterSetName = "Reports")]
         [String]$ReportFileDirectoryPath = ".\reports\",
         [parameter(Mandatory = $false, ParameterSetName = "Reports")]
-        [String]$ReportFileNamePrefix = "Report-",
+        [String]$ReportFileNamePrefix,
         [parameter(Mandatory = $false, ParameterSetName = "Reports")]
         [String]$ReportFileNameMidPart,
         [parameter(Mandatory = $false, ParameterSetName = "Reports")]
-        [Switch]$IncludeDateTimePartInFileName = $true,
+        [Switch]$IncludeDateTimePartInReportFileName = $true,
         [parameter(Mandatory = $false, ParameterSetName = "Reports")]
         [String]$DateTimePartInFileName,
         [parameter(Mandatory = $false, ParameterSetName = "Reports")]
-        [String]$ReportFileNameExtension = ".csv"
+        [String]$ReportFileNameExtension = ".txt",
+        [parameter(Mandatory = $false, ParameterSetName = "Reports")]
+        [Switch]$BreakOnReportCreationError = $true
         
     )
     
@@ -161,6 +173,50 @@
         
         $EventsToReport = @()
         
+        [Bool]$StartRepairEventFound = $false
+        
+        [Bool]$StopRepairEventFound = $false
+        
+        $StartTimeForServer = Get-Date
+        
+        $StartTimeForServerString = $(Get-Date $StartTimeForServer -format yyyyMMdd-HHmm)
+        
+        #Creating name for the report - if per server report type is selected
+        
+        if ($CreateReportFile -eq 'CreatePerServer') {
+            
+            if ($ReportFileNamePrefix) {
+                
+                [String]$ReportPerServerNamePrefix = $ReportFileNamePrefix
+                
+            }
+            Else {
+                
+                [String]$ReportPerServerNamePrefix = "MBDBs_IntegrityChecks_{0}_" -f $ComputerNetBIOSName
+                
+            }
+            
+            [String]$PerServerReportFile = New-OutputFileNameFullPath -ReportFileNamePrefix $ReportPerServerNamePrefix -ReportFileNameMidPart $ReportFileNameMidPart `
+                                                                      -IncludeDateTimePartInFileName:$IncludeDateTimePartInFileName `
+                                                                      -DateTimePartInFileName $StartTimeForServerString -BreakIfError:$BreakOnReportCreationError
+            
+            If ($ReportPerServerFile.ExitCode -ne 0) {
+                
+                
+                
+            }
+            
+        }
+        
+        [String]$MessageText = "Operation started at {0} - verifing provided parameters" -f $StartTimeForServerString
+        
+        Write-Verbose -Message $MessageText
+        
+        If ((Test-ExchangeCmdletsAvailability) -ne $true) {
+            
+            Throw "The function Invoke-MailboxDatabasesReapairs need to be run using Exchange Management Shell"
+            
+        }
         
         If ($ComputerName -eq 'localhost') {
             
@@ -182,21 +238,17 @@
             
         }
         
+        [String]$MessageText = "Resolved Exchange server names FQDN: {0} , NETBIOS: {1}" -f $ComputerFQDNName, $ComputerNetBIOSName
         
-        If ((Test-ExchangeCmdletsAvailability) -ne $true) {
-            
-            Throw "The function Invoke-MailboxDatabasesReapairs need to be run using Exchange Management Shell"
-            
-        }
+        Write-Verbose -Message $MessageText
         
         $MailboxServer = (Get-MailboxServer -Identity $ComputerNetBIOSName)
         
-        $MailboxServerCount = ($MailboxServer | Measure).Count
-        
+        [Int]$MailboxServerCount = ($MailboxServer | Measure).Count
         
         If ($MailboxServerCount -gt 1) {
             
-            [String]$MessageText = "You can use this function to perform actions at only one server at once."
+            [String]$MessageText = "You can use this function to perform actions on only one server at once."
             
             Throw $MessageText
             
@@ -225,12 +277,15 @@
             
             [Version]$MailboxServerVersion = ($ExchangeSetupFileVersion.FileVersionInfo).FileVersion
             
+            [String]$MessageText = "Discovered version of Exchange Server: {0} " -f $MailboxServerVersion.ToString()
             
+            Write-Verbose -Message $MessageText
             
         }
         Catch {
             
-            [String]$MessageText = "Server {0} is not reachable or PowerShell remoting is not enabled on it."
+            
+            [String]$MessageText = "Server {0} is not reachable or PowerShell remoting is not enabled on it." -f $ComputerNetBIOSName
             
             Write-Verbose $MessageText
             
@@ -240,9 +295,9 @@
         
         Finally {
             
-            If (($MailboxServerVersion.Major -eq 14 -and $MailboxServerVersion.Minor -lt 1) -or $MailboxServerVersion.Major -lt 14) {
+            If (($MailboxServerVersion.Major -eq 14 -and $MailboxServerVersion.Minor -lt 1) -or $MailboxServerVersion.Major -ne 14) {
                 
-                [String]$MessageText = "This function can be used only on Exchange Server 2010 SP1 or newer version."
+                [String]$MessageText = "This function can be used only on Exchange Server 2010 SP1 or newer version of Exchange Server 2010."
                 
                 Throw $MessageText
                 
@@ -284,7 +339,7 @@
             }
         }
         
-        $ActiveDatabasesCount = ($ActiveDatabases | measure).Count
+        [Int]$ActiveDatabasesCount = ($ActiveDatabases | measure).Count
         
         If ($ActiveDatabasesCount -lt 1) {
             
@@ -318,11 +373,6 @@
                 
             }
             
-            
-            $StartRepairEventFound = $false
-            
-            $StopRepairEventFound = $false
-            
             #Current time need to be compared between localhost and destination host to avoid mistakes
             $StartTimeForDatabase = Get-Date
             
@@ -330,28 +380,39 @@
             
             Write-Verbose -Message $MessageText1
             
-            if ($ExchangeSetupFileVersion.Major -eq 14) {
+            if ($MailboxServerVersion.Major -eq 14) {
                 
                 $CurrentRepairRequest = New-MailboxRepairRequest -Database $_.Name -CorruptionType "SearchFolder", "AggregateCounts", "ProvisionedFolder", "FolderView", "MessagePTagCn" -DetectOnly:$DetectOnly
                 
             }
-            elseif (($ExchangeSetupFileVersion.Major -eq 15)) {
+            
+            
+<#
+			#This part is temporary (disabled) due that Exchange 2013 is using other events to 
+			
+            elseif (($MailboxServerVersion.Major -eq 15)) {
                 
-                $CurrentRepairRequest = New-MailboxRepairRequest -Database $_.Name -CorruptionType SearchFolder, FolderView, AggregateCounts, ProvisionedFolder, ReplState, MessagePTAGCn, MessageID, RuleMessageClass, RestrictionFolder, FolderACL, UniqueMidIndex, CorruptJunkRule, MissingSpecialFolders, DropAllLazyIndexes, ImapID, ScheduledCheck, Extension1, Extension2, Extension3, Extension4, Extension5 -DetectOnly:$DetectOnly
+                # $CurrentRepairRequest = New-MailboxRepairRequest -Database $_.Name -CorruptionType SearchFolder, FolderView, AggregateCounts, ProvisionedFolder, ReplState, MessagePTAGCn, MessageID, RuleMessageClass, RestrictionFolder, FolderACL, UniqueMidIndex, CorruptJunkRule, MissingSpecialFolders, DropAllLazyIndexes, ImapID, ScheduledCheck, Extension1, Extension2, Extension3, Extension4, Extension5 -DetectOnly:$DetectOnly
+				
+				$CurrentRepairRequest = New-MailboxRepairRequest -Database $_.Name -CorruptionType "SearchFolder", "AggregateCounts", "ProvisionedFolder", "FolderView", "MessagePTagCn" -DetectOnly:$DetectOnly -Force
                 
             }
-            elseif (($ExchangeSetupFileVersion.Major -eq 16)) {
+			
+
+            elseif (($MailboxServerVersion.Major -eq 16)) {
                 
                 [String]$MessageText = "Exchange 2016 is not supported yet. Sorry ;-)"
                 
                 Throw $MessageText
                 
             }
+			
+#>
             else {
                 
-                [String]$MessageText3 = "Something goes wrong - Exchange version unknown"
+                [String]$MessageText = "Something goes wrong - Exchange version unknown"
                 
-                Throw $MessageText3
+                Throw $MessageText
                 
             }
             
@@ -367,7 +428,7 @@
                     
                     [String]$MessageText2 = "Waiting for start repair operation on the database {0}." -f $CurrentDatabase.Name
                     
-                    Write-Progress -Activity $MessageText2 -Status "Completion percentage is only approximate." -PercentComplete (($i / ($ExpectedDurationStartWait * 60)) * 100)
+                    Write-Progress -Activity $MessageText2 -Status "Completion percentage is only confirmation that something is happening :-)" -PercentComplete (($i / ($ExpectedDurationStartWait * 60)) * 100)
                     
                     if (($i += $CheckProgressEverySeconds) -ge ($ExpectedDurationStartWait * 60)) {
                         
@@ -467,7 +528,7 @@
                         
                         [String]$MessageText = "Database {0} repair request	 is in progress." -f $_.Name
                         
-                        Write-Progress -Activity $MessageText -Status "Completion percentage is only approximate." -PercentComplete (($i / ($ExpectedDurationTimeMinutes * 60)) * 100)
+                        Write-Progress -Activity $MessageText -Status "Completion percentage is only confirmation that something is happening :-)" -PercentComplete (($i / ($ExpectedDurationTimeMinutes * 60)) * 100)
                         
                         if (($i += $CheckProgressEverySeconds) -ge ($ExpectedDurationTimeMinutes * 60)) {
                             
@@ -520,39 +581,40 @@
     
 }
 
-Function New-ReportFileNameFullPath {
+Function New-OutputFileNameFullPath {
     
 <#
 
 	.SYNOPSIS
-	Function intended for 
+	Function intended for preparing filename for output files like reports or logs
    
 	.DESCRIPTION
+	Function intended for preparing filename for output files like reports or logs based on prefix, middle name part, date, etc. with verification
 	
-	.PARAMETER CreateReportFileDirectory
+	.PARAMETER CreateOutputFileDirectory
 	
-	.PARAMETER ReportFileDirectoryPath
+	.PARAMETER OutputFileDirectoryPath
 	
-	.PARAMETER ReportFileNamePrefix
+	.PARAMETER OutputFileNamePrefix
 	
-	.PARAMETER ReportFileNameMidPart
+	.PARAMETER OutputFileNameMidPart
 	
 	.PARAMETER IncludeDateTimePartInFileName
 	
 	.PARAMETER DateTimePartInFileName
 	
-	.PARAMETER ReportFileNameExtension
+	.PARAMETER OutputFileNameExtension
 	
-	.PARAMETER CheckIfReportFileExist
+	.PARAMETER CheckIfOutputFileExist
 	
 	.PARAMETER BreakIfError
 
 	.EXAMPLE
 	
-	[PS] > New-ReportFileNameFullPath 
+	[PS] > New-OutputFileNameFullPath 
 	 
 	.LINK
-	https://github.com/it-praktyk/New-ReportFileNameFullPath
+	https://github.com/it-praktyk/New-OutputFileNameFullPath
 	
 	.LINK
 	https://www.linkedin.com/in/sciesinskiwojciech
@@ -564,7 +626,8 @@ Function New-ReportFileNameFullPath {
 	VERSIONS HISTORY
 	0.1.0 - 2015-09-01 - Initial release
     0.1.1 - 2015-09-01 - Minor update
-	
+    0.2.0 - 2015-09-08 - Corrected, function renamed to New-OutputFileNameFullPath from New-ReportFileNameFullPath 
+    
 	TODO
 	Update help
 
@@ -584,25 +647,25 @@ Function New-ReportFileNameFullPath {
 	
 #>
     
-    
+    [cmdletbinding()]
     param (
         
         [parameter(Mandatory = $false)]
-        [Switch]$CreateReportFileDirectory = $true,
+        [Switch]$CreateOutputFileDirectory = $true,
         [parameter(Mandatory = $false)]
-        [String]$ReportFileDirectoryPath = ".\reports\",
+        [String]$OutputFileDirectoryPath = ".\Outputs\",
         [parameter(Mandatory = $false)]
-        [String]$ReportFileNamePrefix = "Report-",
+        [String]$OutputFileNamePrefix = "Output-",
         [parameter(Mandatory = $false)]
-        [String]$ReportFileNameMidPart,
+        [String]$OutputFileNameMidPart,
         [parameter(Mandatory = $false)]
         [Switch]$IncludeDateTimePartInFileName = $true,
         [parameter(Mandatory = $false)]
         [String]$DateTimePartInFileName,
         [parameter(Mandatory = $false)]
-        [String]$ReportFileNameExtension = ".csv",
+        [String]$OutputFileNameExtension = ".csv",
         [parameter(Mandatory = $false)]
-        [Switch]$CheckIfReportFileExist = $true,
+        [Switch]$CheckIfOutputFileExist = $true,
         [parameter(Mandatory = $false)]
         [Switch]$BreakIfError = $true
         
@@ -612,12 +675,12 @@ Function New-ReportFileNameFullPath {
     
     [Int]$ExitCode = 0
     
-    [String]$ErrorDescription = $null
+    [String]$ExitCodeDescription = $null
     
     $Result = New-Object PSObject
     
     #Convert relative path to absolute path
-    [String]$ReportFileDirectoryPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($ReportFileDirectoryPath)
+    [String]$OutputFileDirectoryPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutputFileDirectoryPath)
     
     #Assign value to the variable $IncludeDateTimePartInFileName if is not initialized
     If ($IncludeDateTimePartInFileName -and $DateTimePartInFileName -eq "") {
@@ -626,20 +689,19 @@ Function New-ReportFileNameFullPath {
         
     }
     
-    #Check if report directory exist and try create if not
-    
-    If ($CreateReportFileDirectory -and !$((Get-Item -Path $ReportFileDirectoryPath -ErrorAction SilentlyContinue) -is [system.io.directoryinfo])) {
+    #Check if Output directory exist and try create if not
+    If ($CreateOutputFileDirectory -and !$((Get-Item -Path $OutputFileDirectoryPath -ErrorAction SilentlyContinue) -is [system.io.directoryinfo])) {
         
         Try {
             
             $ErrorActionPreference = 'Stop'
             
-            New-Item -Path $ReportFileDirectoryPath -type Directory | Out-Null
+            New-Item -Path $OutputFileDirectoryPath -type Directory | Out-Null
             
         }
         Catch {
             
-            [String]$MessageText = "Provided path {0} doesn't exist and can't be created" -f $ReportFileDirectoryPath
+            [String]$MessageText = "Provided path {0} doesn't exist and can't be created" -f $OutputFileDirectoryPath
             
             If ($BreakIfError) {
                 
@@ -652,16 +714,16 @@ Function New-ReportFileNameFullPath {
                 
                 [Int]$ExitCode = 1
                 
-                [String]$ErrorDescription = $MessageText
+                [String]$ExitCodeDescription = $MessageText
                 
             }
             
         }
         
     }
-    ElseIf (!$((Get-Item -Path $ReportFileDirectoryPath -ErrorAction SilentlyContinue) -is [system.io.directoryinfo])) {
+    ElseIf (!$((Get-Item -Path $OutputFileDirectoryPath -ErrorAction SilentlyContinue) -is [system.io.directoryinfo])) {
         
-        [String]$MessageText = "Provided patch {0} doesn't exist and value for the parameter CreateReportFileDirectory is set to False" -f $ReportFileDirectoryPath
+        [String]$MessageText = "Provided patch {0} doesn't exist and value for the parameter CreateOutputFileDirectory is set to False" -f $OutputFileDirectoryPath
         
         If ($BreakIfError) {
             
@@ -674,27 +736,27 @@ Function New-ReportFileNameFullPath {
             
             [Int]$ExitCode = 2
             
-            [String]$ErrorDescription = $MessageText
+            [String]$ExitCodeDescription = $MessageText
             
         }
         
     }
     
-    #Try if report directory is writable - temporary file is stored
+    #Try if Output directory is writable - temporary file is stored
     Try {
         
         $ErrorActionPreference = 'Stop'
         
         [String]$TempFileName = [System.IO.Path]::GetTempFileName() -replace '.*\\', ''
         
-        [String]$TempFilePath = "{0}{1}" -f $ReportFileDirectoryPath, $TempFileName
+        [String]$TempFilePath = "{0}{1}" -f $OutputFileDirectoryPath, $TempFileName
         
         New-Item -Path $TempFilePath -type File | Out-Null
         
     }
     Catch {
         
-        [String]$MessageText = "Provided patch {0} is not writable" -f $ReportFileDirectoryPath
+        [String]$MessageText = "Provided patch {0} is not writable" -f $OutputFileDirectoryPath
         
         If ($BreakIfError) {
             
@@ -707,7 +769,7 @@ Function New-ReportFileNameFullPath {
             
             [Int]$ExitCode = 3
             
-            [String]$ErrorDescription = $MessageText
+            [String]$ExitCodeDescription = $MessageText
             
         }
         
@@ -717,33 +779,33 @@ Function New-ReportFileNameFullPath {
     
     
     #Constructing the file name
-    If (!($IncludeDateTimePartInFileName) -and ($ReportFileNameMidPart -ne $null)) {
+    If (!($IncludeDateTimePartInFileName) -and ($OutputFileNameMidPart -ne $null)) {
         
-        [String]$ReportFilePathTemp = "{0}\{1}-{2}.{3}" -f $ReportFileDirectoryPath, $ReportFileNamePrefix, $ReportFileNameMidPart, $ReportFileNameExtension
-        
-    }
-    Elseif (!($IncludeDateTimePartInFileName) -and ($ReportFileNameMidPart -eq $null)) {
-        
-        [String]$ReportFilePathTemp = "{0}\{1}.{2}" -f $ReportFileDirectoryPath, $ReportFileNamePrefix, $ReportFileNameExtension
+        [String]$OutputFilePathTemp = "{0}\{1}-{2}.{3}" -f $OutputFileDirectoryPath, $OutputFileNamePrefix, $OutputFileNameMidPart, $OutputFileNameExtension
         
     }
-    ElseIf ($IncludeDateTimePartInFileName -and ($ReportFileNameMidPart -ne $null)) {
+    Elseif (!($IncludeDateTimePartInFileName) -and ($OutputFileNameMidPart -eq $null)) {
         
-        [String]$ReportFilePathTemp = "{0}\{1}-{2}-{3}.{4}" -f $ReportFileDirectoryPath, $ReportFileNamePrefix, $ReportFileNameMidPart, $DateTimePartInFileName, $ReportFileNameExtension
+        [String]$OutputFilePathTemp = "{0}\{1}.{2}" -f $OutputFileDirectoryPath, $OutputFileNamePrefix, $OutputFileNameExtension
+        
+    }
+    ElseIf ($IncludeDateTimePartInFileName -and ($OutputFileNameMidPart -ne $null)) {
+        
+        [String]$OutputFilePathTemp = "{0}\{1}-{2}-{3}.{4}" -f $OutputFileDirectoryPath, $OutputFileNamePrefix, $OutputFileNameMidPart, $DateTimePartInFileName, $OutputFileNameExtension
         
     }
     Else {
         
-        [String]$ReportFilePathTemp = "{0}\{1}-{2}.{3}" -f $ReportFileDirectoryPath, $ReportFileNamePrefix, $DateTimePartInFileName, $ReportFileNameExtension
+        [String]$OutputFilePathTemp = "{0}\{1}-{2}.{3}" -f $OutputFileDirectoryPath, $OutputFileNamePrefix, $DateTimePartInFileName, $OutputFileNameExtension
         
     }
     
     #Replacing doubled chars \\ , -- , ..
-    [String]$ReportFilePath = "{0}{1}" -f $ReportFilePathTemp.substring(0, 2), (($ReportFilePathTemp.substring(2, $ReportFilePathTemp.length - 2).replace("\\", '\')).replace("--", "-")).replace("..", ".")
+    [String]$OutputFilePath = "{0}{1}" -f $OutputFilePathTemp.substring(0, 2), (($OutputFilePathTemp.substring(2, $OutputFilePathTemp.length - 2).replace("\\", '\')).replace("--", "-")).replace("..", ".")
     
-    If ($CheckIfReportFileExist -and (Test-Path -Path $ReportFilePath -PathType Leaf)) {
+    If ($CheckIfOutputFileExist -and (Test-Path -Path $OutputFilePath -PathType Leaf)) {
         
-        [String]$MessageText = "The file {0} already exist" -f $ReportFilePath
+        [String]$MessageText = "The file {0} already exist" -f $OutputFilePath
         
         If ($BreakIfError) {
             
@@ -756,19 +818,20 @@ Function New-ReportFileNameFullPath {
             
             [Int]$ExitCode = 4
             
-            [String]$ErrorDescription = $MessageText
+            [String]$ExitCodeDescription = $MessageText
             
         }
     }
     
-    $Result | Add-Member -MemberType NoteProperty -Name ExitCode -Value
+    $Result | Add-Member -MemberType NoteProperty -Name OutputFilePath -Value $OutputFilePath
     
-    $Result | Add-Member -MemberType NoteProperty -Name ReportFilePath -Value $ReportFilePath
+    $Result | Add-Member -MemberType NoteProperty -Name ExitCode -Value $ExitCode
+    
+    $Result | Add-Member -MemberType NoteProperty -Name ExitCodeDescription -Value $ExitCodeDescription
     
     Return $Result
     
 }
-
 
 Function Parse10062Events {
     
