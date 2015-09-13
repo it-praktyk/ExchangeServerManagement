@@ -95,6 +95,7 @@
     0.4.0 - 2015-09-07 - Support for Exchange 2013 removed, help partially updated, report creation partially implemented
                          TODO section updated
     0.4.1 - 2015-09-08 - function reformated
+    0.5.0 - 2015-09-13 - added support for creating per server log
     
     DEPENDENCIES
     -   Function Test-ExchangeCmdletsAvailability - minimum 0.1.2
@@ -172,6 +173,8 @@
         
         $ActiveDatabases = @()
         
+        $MessagesToReport = @()
+        
         $EventsToReport = @()
         
         [Bool]$StartRepairEventFound = $false
@@ -181,6 +184,8 @@
         $StartTimeForServer = Get-Date
         
         $StartTimeForServerString = $(Get-Date $StartTimeForServer -format yyyyMMdd-HHmm)
+        
+        
         
         #Creating name for the report - if per server report type is selected
         
@@ -197,25 +202,32 @@
                 
             }
             
-            [String]$PerServerReportFile = New-OutputFileNameFullPath -ReportFileNamePrefix $ReportPerServerNamePrefix -ReportFileNameMidPart $ReportFileNameMidPart `
+            $PerServerReportFile = New-OutputFileNameFullPath -ReportFileNamePrefix $ReportPerServerNamePrefix -ReportFileNameMidPart $ReportFileNameMidPart `
                                                                       -IncludeDateTimePartInFileName:$IncludeDateTimePartInFileName `
                                                                       -DateTimePartInFileName $StartTimeForServerString -BreakIfError:$BreakOnReportCreationError
             
-            If ($ReportPerServerFile.ExitCode -ne 0) {
-                
-                
-                
-            }
+            #If parameter has value which is array something like this [Text2, System.String[]] will be added to log/message
+            [String]$MessageText = "Operation started at {0} with parameters {1} " -f $StartTimeForServer, $PSBoundParameters.GetEnumerator()
+            
+            $MessagesToReport += $MessageText
+            
+            Write-Verbose -Message $MessageText
             
         }
         
-        [String]$MessageText = "Operation started at {0} - verifing provided parameters" -f $StartTimeForServerString
-        
-        Write-Verbose -Message $MessageText
-        
         If ((Test-ExchangeCmdletsAvailability) -ne $true) {
             
-            Throw "The function Invoke-MailboxDatabasesReapairs need to be run using Exchange Management Shell"
+            [String]$MessageText = "The function Invoke-MailboxDatabasesReapairs need to be run using Exchange Management Shell"
+            
+            $MessagesToReport += "`n$MessageText"
+            
+            If ($CreateReportFile -ne "None") {
+                
+                $MessagesToReport | Out-File -FilePath $PerServerReportFile.OutputFilePath
+                
+            }
+            
+            Throw $MessageText
             
         }
         
@@ -241,6 +253,8 @@
         
         [String]$MessageText = "Resolved Exchange server names FQDN: {0} , NETBIOS: {1}" -f $ComputerFQDNName, $ComputerNetBIOSName
         
+        $MessagesToReport += "`n$MessageText"
+        
         Write-Verbose -Message $MessageText
         
         $MailboxServer = (Get-MailboxServer -Identity $ComputerNetBIOSName)
@@ -251,12 +265,28 @@
             
             [String]$MessageText = "You can use this function to perform actions on only one server at once."
             
+            $MessagesToReport += "`n$MessageText"
+            
+            If ($CreateReportFile -ne "None") {
+                
+                $MessagesToReport | Out-File -FilePath $PerServerReportFile.OutputFilePath
+                
+            }
+            
             Throw $MessageText
             
         }
         Elseif ($MailboxServerCount -ne 1) {
             
             [String]$MessageText = "Server {0} is not a Exchange mailbox server" -f $MailboxServer
+            
+            $MessagesToReport += "`n$MessageText"
+            
+            If ($CreateReportFile -ne "None") {
+                
+                $MessagesToReport | Out-File -FilePath $PerServerReportFile.OutputFilePath
+                
+            }
             
             Throw $MessageText
         }
@@ -280,6 +310,8 @@
             
             [String]$MessageText = "Discovered version of Exchange Server: {0} " -f $MailboxServerVersion.ToString()
             
+            $MessagesToReport += "`n$MessageText"
+            
             Write-Verbose -Message $MessageText
             
         }
@@ -287,6 +319,8 @@
             
             
             [String]$MessageText = "Server {0} is not reachable or PowerShell remoting is not enabled on it." -f $ComputerNetBIOSName
+            
+            $MessagesToReport += "`n$MessageText"
             
             Write-Verbose $MessageText
             
@@ -299,6 +333,14 @@
             If (($MailboxServerVersion.Major -eq 14 -and $MailboxServerVersion.Minor -lt 1) -or $MailboxServerVersion.Major -ne 14) {
                 
                 [String]$MessageText = "This function can be used only on Exchange Server 2010 SP1 or newer version of Exchange Server 2010."
+                
+                $MessagesToReport += "`n$MessageText"
+                
+                If ($CreateReportFile -ne "None") {
+                    
+                    $MessagesToReport | Out-File -FilePath $PerServerReportFile.OutputFilePath
+                    
+                }
                 
                 Throw $MessageText
                 
@@ -325,6 +367,8 @@
                     
                     [String]$MessageText = "Database {0} is not currently active on {1} and can't be checked" -f $CurrentDatabase.Name, $ComputerNetBIOSName
                     
+                    $MessagesToReport += "`n$MessageText"
+                    
                     Write-Error -Message $MessageText
                     
                     Continue
@@ -346,6 +390,8 @@
             
             [String]$MessageText = "Any database was not found on the server {0}" -f $ComputerNetBIOSName
             
+            $MessagesToReport += "`n$MessageText"
+            
             Write-Error $MessageText
             
         }
@@ -355,7 +401,6 @@
     Process {
         
         $ActiveDatabases | foreach {
-            
             
             #Check current status of database - if is still mounted on correct server - if not exit from current loop iteration
             
@@ -367,6 +412,9 @@
             Catch {
                 
                 [String]$MessageText = "Database {0} is not currently active on {1} and can't be checked" -f $CurrentDatabase, $ComputerNetBIOSName
+                
+                $MessagesToReport += "`n$MessageText"
+                
                 Write-Error -Message $MessageText
                 
                 #Exit from current loop iteration - check the next database
@@ -377,16 +425,17 @@
             #Current time need to be compared between localhost and destination host to avoid mistakes
             $StartTimeForDatabase = Get-Date
             
-            [String]$MessageText1 = "Invoking command for repair database {0}" -f $CurrentDatabase.Name
+            [String]$MessageText = "Invoking command for repair database {0}" -f $CurrentDatabase.Name
             
-            Write-Verbose -Message $MessageText1
+            $MessagesToReport += "`n$MessageText"
+            
+            Write-Verbose -Message $MessageText
             
             if ($MailboxServerVersion.Major -eq 14) {
                 
                 $CurrentRepairRequest = New-MailboxRepairRequest -Database $_.Name -CorruptionType "SearchFolder", "AggregateCounts", "ProvisionedFolder", "FolderView", "MessagePTagCn" -DetectOnly:$DetectOnly
                 
             }
-            
             
 <#
             #This part is temporary (disabled) due that Exchange 2013 is using other events to 
@@ -413,6 +462,14 @@
                 
                 [String]$MessageText = "Something goes wrong - Exchange version unknown"
                 
+                $MessagesToReport += "`n$MessageText"
+                
+                If ($CreateReportFile -ne "None") {
+                    
+                    $MessagesToReport | Out-File -FilePath $PerServerReportFile.OutputFilePath
+                    
+                }
+                
                 Throw $MessageText
                 
             }
@@ -427,9 +484,9 @@
                 
                 If ($DisplayProgressBar) {
                     
-                    [String]$MessageText2 = "Waiting for start repair operation on the database {0}." -f $CurrentDatabase.Name
+                    [String]$MessageText = "Waiting for start repair operation on the database {0}." -f $CurrentDatabase.Name
                     
-                    Write-Progress -Activity $MessageText2 -Status "Completion percentage is only confirmation that something is happening :-)" -PercentComplete (($i / ($ExpectedDurationStartWait * 60)) * 100)
+                    Write-Progress -Activity $MessageText -Status "Completion percentage is only confirmation that something is happening :-)" -PercentComplete (($i / ($ExpectedDurationStartWait * 60)) * 100)
                     
                     if (($i += $CheckProgressEverySeconds) -ge ($ExpectedDurationStartWait * 60)) {
                         
@@ -449,7 +506,15 @@
                     
                     [String]$MessageText = "Events Found {0}" -f $MonitoredEvents
                     
+                    $MessagesToReport += "`n$MessageText"
+                    
                     Write-Verbose -Message $MessageText
+                    
+                    $MonitoredEvents | foreach {
+                        
+                        $EventsToReport += $_
+                        
+                    }
                     
                 }
                 
@@ -459,7 +524,9 @@
                 
                 If ($ErrorEventsFound) {
                     
-                    [where]$MessageText = "Under checking database {0} error occured - event ID  {1} " -f $_.Name, $ErrorEvents.EventId
+                    [String]$MessageText = "Under checking database {0} error occured - event ID  {1} " -f $_.Name, $ErrorEvents.EventId
+                    
+                    $MessagesToReport += "`n$MessageText"
                     
                     Write-Error -Message $MessageText
                     
@@ -480,9 +547,11 @@
                 
                 Else {
                     
+                    [String]$StartTime = Get-Date $($StartRepairEvent.TimeGenerated) -format yyyyMMdd-HHmm
+                    
                     [String]$MessageText = "Repair request for database {0} started at {1}" -f $_.Name, $StartRepairEvent.TimeGenerated
                     
-                    [String]$StartTime = Get-Date $($StartRepairEvent.TimeGenerated) -format yyyyMMdd-HHmm
+                    $MessagesToReport += "`n$MessageText"
                     
                     Write-Verbose -Message $MessageText
                     
@@ -502,6 +571,22 @@
                 
                 $MonitoredEvents = Get-EventsBySource -ComputerName $ComputerFQDNName -LogName "Application" -ProviderName "MSExchangeIS Mailbox Store" -EventID 10049, 10050, 10051, 10059 -StartTime $StartTimeForDatabase -Verbose:$false
                 
+                If (($MonitoredEvents | measure).count -ge 1) {
+                    
+                    [String]$MessageText = "Events Found {0}" -f $MonitoredEvents
+                    
+                    $MessagesToReport += "`n$MessageText"
+                    
+                    Write-Verbose -Message $MessageText
+                    
+                    $MonitoredEvents | foreach {
+                        
+                        $EventsToReport += $_
+                        
+                    }
+                    
+                }
+                
                 $ErrorEvents = ($MonitoredEvents | where { $_.EventId -ne 10048 })
                 
                 $ErrorEventsFound = (($ErrorEvents | measure).count -ge 1)
@@ -511,6 +596,8 @@
                     [where]$MessageText = "Under checking database {0} error occured - event ID  {1} " -f $_.Name, $ErrorEvents.EventId
                     
                     Write-Error -Message $MessageText
+                    
+                    $MessagesToReport += "`n$MessageText"
                     
                     Remove-Variable -Name MonitoredEvents
                     
@@ -550,6 +637,8 @@
                     
                     [String]$MessageText = "Repair request for database {0} end at {1}" -f $_.Name, $StopRepairEvent.TimeGenerated
                     
+                    $MessagesToReport += "`n$MessageText"
+                    
                     Write-Verbose -Message $MessageText
                     
                     If ($DisplaySummary) {
@@ -568,7 +657,6 @@
                     
                 }
                 
-                
             }
             while ($StopRepairEventFound -eq $false)
             
@@ -577,6 +665,19 @@
     }
     
     End {
+        
+        
+        If ($CreateReportFile -ne "None") {
+            
+            $MessagesToReport | Set-Content -Path $PerServerReportFile.OutputFilePath
+            
+            [String]$EmptyLine = "`n"
+            
+            $EmptyLine | Add-Content
+            
+            $EventsToReport | Add-Content -Path $PerServerReportFile.OutputFilPath
+            
+        }
         
     }
     
