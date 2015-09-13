@@ -7,6 +7,8 @@
     .DESCRIPTION
     Function invokes New-MailboxDatabaseRepair cmdlet for all active mailbox database copies on server. Mailbox databases can be also
     provided by name in function parameter
+    
+    Informations about repair operations you can find on pages
 
     The Exchange Team Blog: New Support Policy for Repaired Exchange Databases
     http://blogs.technet.com/b/exchange/archive/2015/05/01/new-support-policy-for-repaired-exchange-databases.aspx
@@ -46,13 +48,16 @@
     If function is used in interactive mode progress bar can be displayed to provide overall information that something is happend. 
     
     .PARAMETER CheckProgressEverySeconds
+    Set interval for progress checking, by default operation progress is checked every 120 seconds
         
     .PARAMETER DisplaySummary
-    
+    Set to TRUE if summary should be displayed - summary will contain data about performed operations
+        
     .PARAMETER ExpectedDurationTimeMinutes
+    Time in minutes used for displaing progress bar
     
     .PARAMETER CreateReportFile
-    By default report file is created
+    By default report file per server is created
     
     .PARAMETER ReportFileDirectoryPath
     By default report files are stored in subfolder "reports" in current path, if "reports" subfolder is missed will be created
@@ -61,14 +66,19 @@
     Prefix used for creating report files name. Default is "MBDBs_IntegrityChecks_<SERVER_NETBIOS_NAME>"
     
     .PARAMETER ReportFileNameMidPart
+    Part of the name which will be used in midle of name
     
     .PARAMETER IncludeDateTimePartInReportFileName
+    Set to TRUE if report file name should contains part based on current date and time - format yyyyMMdd-HHmm is used
     
-    .PARAMETER DateTimePartInFileName
+    .PARAMETER DateTimePartInReportFileName
+    Set to date and time which should be used in report file name, by default current date and time is used
     
     .PARAMETER ReportFileNameExtension
+    Set to extension which need to be used for report file, by default ".txt" is used
     
     .PARAMETER BreakOnReportCreationError
+    Break function execution if parameters provided for report file creation are not correct or destination file path is not writables
     
     .EXAMPLE
     
@@ -94,22 +104,24 @@
     0.3.1 - 2015-09-05 - Corrected but still required testing on Exchange 2013
     0.4.0 - 2015-09-07 - Support for Exchange 2013 removed, help partially updated, report creation partially implemented
                          TODO section updated
-    0.4.1 - 2015-09-08 - function reformated
-    0.5.0 - 2015-09-13 - added support for creating per server log
+    0.4.1 - 2015-09-08 - Function reformated
+    0.5.0 - 2015-09-13 - Added support for creation per server log
+    0.5.1 - 2015-09-14 - Help updated, TO DO section updated, DEPENDENCIES section updated
     
     DEPENDENCIES
     -   Function Test-ExchangeCmdletsAvailability - minimum 0.1.2
         https://github.com/it-praktyk/Test-ExchangeCmdletsAvailability
     -   Function Function Get-EventsBySource - minimum 0.3.2
         https://github.com/it-praktyk/Get-EvenstBySource
-    -   Function New-OutputFileNameFullPath - minimum 0.2.0
+    -   Function New-OutputFileNameFullPath - minimum 0.3.0
         https://github.com/it-praktyk/New-OutputFileNameFullPath
 
-    TODO
-    - store and/or mail summary report
+    TO DO
+    - store and/or mail summary report - add reports per database
     - parse output for application events 10062
     - Current time and timezone need to be compared between localhost and destination host to avoid mistakes
     - exit code return need to be implemented
+    - add support for Exchange 2013 (?) and 2016 (?)
         
     LICENSE
     Copyright (C) 2015 Wojciech Sciesinski
@@ -130,7 +142,7 @@
     param
     (
         [parameter(Mandatory = $false)]
-        [alias("server")]
+        [alias("server","cn")]
         [String]$ComputerName = 'localhost',
         
         #This parameter is not currently used - 
@@ -142,13 +154,13 @@
         [parameter(Mandatory = $false)]
         [switch]$DetectOnly = $false,
         [parameter(Mandatory = $false)]
+        [switch]$DisplayProgressBar = $true,
+        [parameter(Mandatory = $false)]
         [Int]$CheckProgressEverySeconds = 120,
         [parameter(Mandatory = $false)]
         [switch]$DisplaySummary = $false,
-        [parameter(Mandatory = $false)]
-        [switch]$DisplayProgressBar = $true,
         [Parameter(mandatory = $false)]
-        [int]$ExpectedDurationTimeMinutes = 15,
+        [int]$ExpectedDurationTimeMinutes = 150,
         [parameter(Mandatory = $false, ParameterSetName = "Reports")]
         [ValidateSet("CreatePerServer", "CreatePerDatabase", "None")]
         [String]$CreateReportFile = "CreatePerServer",
@@ -161,7 +173,7 @@
         [parameter(Mandatory = $false, ParameterSetName = "Reports")]
         [Switch]$IncludeDateTimePartInReportFileName = $true,
         [parameter(Mandatory = $false, ParameterSetName = "Reports")]
-        [String]$DateTimePartInFileName,
+        [DateTime]$DateTimePartInReportFileName,
         [parameter(Mandatory = $false, ParameterSetName = "Reports")]
         [String]$ReportFileNameExtension = ".txt",
         [parameter(Mandatory = $false, ParameterSetName = "Reports")]
@@ -203,10 +215,10 @@
             }
             
             $PerServerReportFile = New-OutputFileNameFullPath -ReportFileNamePrefix $ReportPerServerNamePrefix -ReportFileNameMidPart $ReportFileNameMidPart `
-                                                                      -IncludeDateTimePartInFileName:$IncludeDateTimePartInFileName `
-                                                                      -DateTimePartInFileName $StartTimeForServerString -BreakIfError:$BreakOnReportCreationError
+                                                              -IncludeDateTimePartInOutputFileName:$IncludeDateTimePartInReportFileName `
+                                                              -DateTimePartInOutputFileName $StartTimeForServer -BreakIfError:$BreakOnReportCreationError
             
-            #If parameter has value which is array something like this [Text2, System.String[]] will be added to log/message
+            #If parameter has value which is array something like this "[Text2, System.String[]]" will be added to log/message
             [String]$MessageText = "Operation started at {0} with parameters {1} " -f $StartTimeForServer, $PSBoundParameters.GetEnumerator()
             
             $MessagesToReport += $MessageText
@@ -666,6 +678,16 @@
     
     End {
         
+        $EndTimeForServer = Get-Date
+        
+        $DurationTimeForServer = New-TimeSpan -Start $StartTimeForServer -End $EndTimeForServer
+        
+        [String]$MessageText = "Operation for server {0} ended at {1}, operation duration time: {2} days, {3} hours, {4} minutes, {5} seconds" `
+        -f $ComputerNetBIOSName, $EndTimeForServer, $DurationTimeForServer.Days, $DurationTimeForServer.Hours, $DurationTimeForServer.Minutes, $DurationTimeForServer.Secounds
+        
+        $MessagesToReport += "`n$MessageText"
+        
+        Write-Verbose -Message $MessageText        
         
         If ($CreateReportFile -ne "None") {
             
@@ -673,7 +695,7 @@
             
             [String]$EmptyLine = "`n"
             
-            $EmptyLine | Add-Content
+            $EmptyLine | Add-Content -Path $PerServerReportFile.OutputFilePath
             
             $EventsToReport | Add-Content -Path $PerServerReportFile.OutputFilPath
             
@@ -691,29 +713,38 @@ Function New-OutputFileNameFullPath {
     Function intended for preparing filename for output files like reports or logs
    
     .DESCRIPTION
-    Function intended for preparing filename for output files like reports or logs based on prefix, middle name part, date, etc. with verification
-    
-    .PARAMETER CreateOutputFileDirectory
+    Function intended for preparing filename for output files like reports or logs based on prefix, middle name part, date, etc. with verification if provided path is writable
     
     .PARAMETER OutputFileDirectoryPath
+    By default output files are stored in subfolder "outputs" in current path
+    
+    .PARAMETER CreateOutputFileDirectory
+    Set tu TRUE if provided output file directory should be created if is missed
     
     .PARAMETER OutputFileNamePrefix
+    Prefix used for creating output files name
     
     .PARAMETER OutputFileNameMidPart
+    Part of the name which will be used in midle of output iile name
     
-    .PARAMETER IncludeDateTimePartInFileName
+    .PARAMETER IncludeDateTimePartInOutputFileName
+    Set to TRUE if report file name should contains part based on date and time - format yyyyMMdd-HHmm is used
     
-    .PARAMETER DateTimePartInFileName
+    .PARAMETER DateTimePartInOutputFileName
+    Set to date and time which should be used in output file name, by default current date and time is used
     
     .PARAMETER OutputFileNameExtension
+    Set to extension which need to be used for output file, by default ".txt" is used
     
-    .PARAMETER CheckIfOutputFileExist
+    .PARAMETER ErrorIfOutputFileExist
+    Generate error if output file already exist
     
     .PARAMETER BreakIfError
+    Break function execution if parameters provided for output file creation are not correct or destination file path is not writables
+    
 
     .EXAMPLE
-    
-    [PS] > New-OutputFileNameFullPath 
+       
      
     .LINK
     https://github.com/it-praktyk/New-OutputFileNameFullPath
@@ -728,10 +759,13 @@ Function New-OutputFileNameFullPath {
     VERSIONS HISTORY
     0.1.0 - 2015-09-01 - Initial release
     0.1.1 - 2015-09-01 - Minor update
-    0.2.0 - 2015-09-08 - Corrected, function renamed to New-OutputFileNameFullPath from New-ReportFileNameFullPath 
+    0.2.0 - 2015-09-08 - Corrected, function renamed to New-OutputFileNameFullPath from New-ReportFileNameFullPath
+    0.3.0 - 2015-09-13 - implmentation for DateTimePartInFileName parameter corrected
     
     TODO
-    Update help
+    Update help - example section
+    Change/extend type of returned object 
+    Change/extend behavior if file exist
 
         
     LICENSE
@@ -753,21 +787,21 @@ Function New-OutputFileNameFullPath {
     param (
         
         [parameter(Mandatory = $false)]
-        [Switch]$CreateOutputFileDirectory = $true,
-        [parameter(Mandatory = $false)]
         [String]$OutputFileDirectoryPath = ".\Outputs\",
+        [parameter(Mandatory = $false)]
+        [Switch]$CreateOutputFileDirectory = $true,
         [parameter(Mandatory = $false)]
         [String]$OutputFileNamePrefix = "Output-",
         [parameter(Mandatory = $false)]
         [String]$OutputFileNameMidPart,
         [parameter(Mandatory = $false)]
-        [Switch]$IncludeDateTimePartInFileName = $true,
+        [Switch]$IncludeDateTimePartInOutputFileName = $true,
         [parameter(Mandatory = $false)]
-        [String]$DateTimePartInFileName,
+        [DateTime]$DateTimePartInOutputFileName,
         [parameter(Mandatory = $false)]
-        [String]$OutputFileNameExtension = ".csv",
+        [String]$OutputFileNameExtension = ".txt",
         [parameter(Mandatory = $false)]
-        [Switch]$CheckIfOutputFileExist = $true,
+        [Switch]$ErrorIfOutputFileExist = $true,
         [parameter(Mandatory = $false)]
         [Switch]$BreakIfError = $true
         
@@ -784,12 +818,18 @@ Function New-OutputFileNameFullPath {
     #Convert relative path to absolute path
     [String]$OutputFileDirectoryPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutputFileDirectoryPath)
     
-    #Assign value to the variable $IncludeDateTimePartInFileName if is not initialized
-    If ($IncludeDateTimePartInFileName -and $DateTimePartInFileName -eq "") {
+    #Assign value to the variable $IncludeDateTimePartInOutputFileName if is not initialized
+    If ($IncludeDateTimePartInOutputFileName -and $DateTimePartInOutputFileName -eq "") {
         
-        [String]$DateTimePartInFileName = $(Get-Date -format yyyyMMdd-HHmm)
+        [String]$DateTimePartInFileNameString = $(Get-Date -format yyyyMMdd-HHmm)
         
     }
+    Else {
+        
+        [String]$DateTimePartInFileNameString = $(Get-Date $DateTimePartInOutputFileName -format yyyyMMdd-HHmm)
+        
+    }
+    
     
     #Check if Output directory exist and try create if not
     If ($CreateOutputFileDirectory -and !$((Get-Item -Path $OutputFileDirectoryPath -ErrorAction SilentlyContinue) -is [system.io.directoryinfo])) {
@@ -881,31 +921,31 @@ Function New-OutputFileNameFullPath {
     
     
     #Constructing the file name
-    If (!($IncludeDateTimePartInFileName) -and ($OutputFileNameMidPart -ne $null)) {
+    If (!($IncludeDateTimePartInOutputFileName) -and ($OutputFileNameMidPart -ne $null)) {
         
         [String]$OutputFilePathTemp = "{0}\{1}-{2}.{3}" -f $OutputFileDirectoryPath, $OutputFileNamePrefix, $OutputFileNameMidPart, $OutputFileNameExtension
         
     }
-    Elseif (!($IncludeDateTimePartInFileName) -and ($OutputFileNameMidPart -eq $null)) {
+    Elseif (!($IncludeDateTimePartInOutputFileName) -and ($OutputFileNameMidPart -eq $null)) {
         
         [String]$OutputFilePathTemp = "{0}\{1}.{2}" -f $OutputFileDirectoryPath, $OutputFileNamePrefix, $OutputFileNameExtension
         
     }
-    ElseIf ($IncludeDateTimePartInFileName -and ($OutputFileNameMidPart -ne $null)) {
+    ElseIf ($IncludeDateTimePartInOutputFileName -and ($OutputFileNameMidPart -ne $null)) {
         
-        [String]$OutputFilePathTemp = "{0}\{1}-{2}-{3}.{4}" -f $OutputFileDirectoryPath, $OutputFileNamePrefix, $OutputFileNameMidPart, $DateTimePartInFileName, $OutputFileNameExtension
+        [String]$OutputFilePathTemp = "{0}\{1}-{2}-{3}.{4}" -f $OutputFileDirectoryPath, $OutputFileNamePrefix, $OutputFileNameMidPart, $DateTimePartInFileNameString, $OutputFileNameExtension
         
     }
     Else {
         
-        [String]$OutputFilePathTemp = "{0}\{1}-{2}.{3}" -f $OutputFileDirectoryPath, $OutputFileNamePrefix, $DateTimePartInFileName, $OutputFileNameExtension
+        [String]$OutputFilePathTemp = "{0}\{1}-{2}.{3}" -f $OutputFileDirectoryPath, $OutputFileNamePrefix, $DateTimePartInFileNameString, $OutputFileNameExtension
         
     }
     
     #Replacing doubled chars \\ , -- , ..
     [String]$OutputFilePath = "{0}{1}" -f $OutputFilePathTemp.substring(0, 2), (($OutputFilePathTemp.substring(2, $OutputFilePathTemp.length - 2).replace("\\", '\')).replace("--", "-")).replace("..", ".")
     
-    If ($CheckIfOutputFileExist -and (Test-Path -Path $OutputFilePath -PathType Leaf)) {
+    If ($ErrorIfOutputFileExist -and (Test-Path -Path $OutputFilePath -PathType Leaf)) {
         
         [String]$MessageText = "The file {0} already exist" -f $OutputFilePath
         
