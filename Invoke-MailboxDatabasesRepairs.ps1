@@ -1,6 +1,5 @@
 ﻿function Invoke-MailboxDatabasesRepairs {
-    
-    <#
+<#
     .SYNOPSIS
     Function intended for performing checks and repairs operation on Exchange Server 2010 SP1 (or newer) mailbox databases
    
@@ -107,7 +106,9 @@
     0.4.1 - 2015-09-08 - Function reformated
     0.5.0 - 2015-09-13 - Added support for creation per server log
     0.5.1 - 2015-09-14 - Help updated, TO DO section updated, DEPENDENCIES section updated
-    
+    0.6.0 - 2015-09-14 - Log creation capabilities updates, parsing 10062 events added
+	    
+
     DEPENDENCIES
     -   Function Test-ExchangeCmdletsAvailability - minimum 0.1.2
         https://github.com/it-praktyk/Test-ExchangeCmdletsAvailability
@@ -117,11 +118,11 @@
         https://github.com/it-praktyk/New-OutputFileNameFullPath
 
     TO DO
-    - store and/or mail summary report - add reports per database
-    - parse output for application events 10062
+    - improve store and/or mail summary report - add reports per database
     - Current time and timezone need to be compared between localhost and destination host to avoid mistakes
     - exit code return need to be implemented
     - add support for Exchange 2013 (?) and 2016 (?)
+    - add named regions to easier navigation in code 
         
     LICENSE
     Copyright (C) 2015 Wojciech Sciesinski
@@ -142,7 +143,7 @@
     param
     (
         [parameter(Mandatory = $false)]
-        [alias("server","cn")]
+        [alias("server", "cn")]
         [String]$ComputerName = 'localhost',
         
         #This parameter is not currently used - 
@@ -187,52 +188,50 @@
         
         $MessagesToReport = @()
         
+        $PerServerMessagesToReport = @()
+        
         $EventsToReport = @()
         
+        $Events10062DetailsToReport = @()
+        
+        [Bool]$IsRunningOnLocalhost = $false
+                
         [Bool]$StartRepairEventFound = $false
         
         [Bool]$StopRepairEventFound = $false
         
         $StartTimeForServer = Get-Date
-        
+                
         $StartTimeForServerString = $(Get-Date $StartTimeForServer -format yyyyMMdd-HHmm)
+         
+        #Creating name for the report, a report file will be used for save initial errors or all messages if CreatePerServer report will be selected
         
-        
-        
-        #Creating name for the report - if per server report type is selected
-        
-        if ($CreateReportFile -eq 'CreatePerServer') {
+        if ($CreateReportFile -ne 'None') {
             
-            if ($ReportFileNamePrefix) {
+            if ($PSBoundParameters.ContainsKey('$ReportFileNamePrefix')) {
                 
                 [String]$ReportPerServerNamePrefix = $ReportFileNamePrefix
                 
             }
             Else {
                 
-                [String]$ReportPerServerNamePrefix = "MBDBs_IntegrityChecks_{0}_" -f $ComputerNetBIOSName
+                [String]$ReportPerServerNamePrefix = "MBDBs_IntegrityChecks_{0}" -f $ComputerNetBIOSName
                 
             }
             
-            $PerServerReportFile = New-OutputFileNameFullPath -ReportFileNamePrefix $ReportPerServerNamePrefix -ReportFileNameMidPart $ReportFileNameMidPart `
+            $PerServerReportFile = New-OutputFileNameFullPath -OutputFileDirectoryPath $ReportFileDirectoryPath -OutputFileNamePrefix $ReportPerServerNamePrefix `
+                                                              -OutputFileNameMidPart $ReportFileNameMidPart `
                                                               -IncludeDateTimePartInOutputFileName:$IncludeDateTimePartInReportFileName `
                                                               -DateTimePartInOutputFileName $StartTimeForServer -BreakIfError:$BreakOnReportCreationError
-            
-            #If parameter has value which is array something like this "[Text2, System.String[]]" will be added to log/message
-            [String]$MessageText = "Operation started at {0} with parameters {1} " -f $StartTimeForServer, $PSBoundParameters.GetEnumerator()
-            
-            $MessagesToReport += $MessageText
-            
-            Write-Verbose -Message $MessageText
             
         }
         
         If ((Test-ExchangeCmdletsAvailability) -ne $true) {
-            
+
             [String]$MessageText = "The function Invoke-MailboxDatabasesReapairs need to be run using Exchange Management Shell"
             
             $MessagesToReport += "`n$MessageText"
-            
+
             If ($CreateReportFile -ne "None") {
                 
                 $MessagesToReport | Out-File -FilePath $PerServerReportFile.OutputFilePath
@@ -240,7 +239,7 @@
             }
             
             Throw $MessageText
-            
+ 
         }
         
         If ($ComputerName -eq 'localhost') {
@@ -263,9 +262,22 @@
             
         }
         
+        If (([Net.DNS]::GetHostEntry("localhost")).HostName -eq ([Net.DNS]::GetHostEntry($ComputerName)).HostName) {
+            
+            [Bool]$IsRunningOnLocalhost = $true
+            
+        }
+        
         [String]$MessageText = "Resolved Exchange server names FQDN: {0} , NETBIOS: {1}" -f $ComputerFQDNName, $ComputerNetBIOSName
         
         $MessagesToReport += "`n$MessageText"
+        
+        Write-Verbose -Message $MessageText
+        
+        #If parameter has value which is array something like this "[Text2, System.String[]]" will be added to log/message
+        [String]$MessageText = "Operation started at {0} with parameters {1} " -f $StartTimeForServer, $PSBoundParameters.GetEnumerator()
+        
+        $MessagesToReport += $MessageText
         
         Write-Verbose -Message $MessageText
         
@@ -279,7 +291,9 @@
             
             $MessagesToReport += "`n$MessageText"
             
+            
             If ($CreateReportFile -ne "None") {
+                
                 
                 $MessagesToReport | Out-File -FilePath $PerServerReportFile.OutputFilePath
                 
@@ -294,12 +308,14 @@
             
             $MessagesToReport += "`n$MessageText"
             
+            
             If ($CreateReportFile -ne "None") {
+                
                 
                 $MessagesToReport | Out-File -FilePath $PerServerReportFile.OutputFilePath
                 
             }
-            
+
             Throw $MessageText
         }
         
@@ -307,7 +323,8 @@
         #List of build version: https://technet.microsoft.com/library/hh135098.aspx
         Try {
             
-            if ($ComputerName -match 'localhost') {
+            if ($IsRunningOnLocalhost) {
+                
                 
                 $ExchangeSetupFileVersion = Get-Command Exsetup.exe | select FileversionInfo
                 
@@ -353,13 +370,12 @@
                     $MessagesToReport | Out-File -FilePath $PerServerReportFile.OutputFilePath
                     
                 }
-                
+
                 Throw $MessageText
                 
             }
             
         }
-        
         
         If ($Database -eq 'All') {
             
@@ -409,10 +425,33 @@
         }
         
     }
-    
+
     Process {
-        
+       
         $ActiveDatabases | foreach {
+            
+            #Current time need to be compared between localhost and destination host to avoid mistakes
+            $StartTimeForDatabase = Get-Date
+            
+            If ($CreateReportFile -eq 'CreatePerDatabase') {
+                
+                if ($PSBoundParameters.ContainsKey('$ReportFileNamePrefix')) {
+                    
+                    [String]$ReportPerDatabaseNamePrefix = $ReportFileNamePrefix
+                    
+                }
+                Else {
+                    
+                    [String]$ReportPerDatabaseNamePrefix = "{0}_{1}_IntegrityChecks" -f $_.Name, $_.Server
+                    
+                }
+                
+                
+                $PerDatabaseReportFile = New-OutputFileNameFullPath -OutputFileDirectoryPath $ReportFileDirectoryPath -OutputFileNamePrefix $ReportPerDatabaseNamePrefix `
+                                                                    -IncludeDateTimePartInOutputFileName:$IncludeDateTimePartInReportFileName `
+                                                                    -DateTimePartInOutputFileName $StartTimeForDatabase -BreakIfError:$BreakOnReportCreationError
+                
+            }
             
             #Check current status of database - if is still mounted on correct server - if not exit from current loop iteration
             
@@ -434,63 +473,61 @@
                 
             }
             
-            #Current time need to be compared between localhost and destination host to avoid mistakes
-            $StartTimeForDatabase = Get-Date
-            
-            [String]$MessageText = "Invoking command for repair database {0}" -f $CurrentDatabase.Name
+            [String]$MessageText = "Invoking command for repair database {0} on mailbox server {1}" -f $CurrentDatabase.Name, $ComputerFQDNName
             
             $MessagesToReport += "`n$MessageText"
             
             Write-Verbose -Message $MessageText
             
-            if ($MailboxServerVersion.Major -eq 14) {
+            Try {
                 
-                $CurrentRepairRequest = New-MailboxRepairRequest -Database $_.Name -CorruptionType "SearchFolder", "AggregateCounts", "ProvisionedFolder", "FolderView", "MessagePTagCn" -DetectOnly:$DetectOnly
                 
+                if ($MailboxServerVersion.Major -eq 14) {
+                    
+                    $CurrentRepairRequest = New-MailboxRepairRequest -Database $_.Name -CorruptionType "SearchFolder", "AggregateCounts", "ProvisionedFolder", "FolderView", "MessagePTagCn" -DetectOnly:$DetectOnly -ErrorAction Stop
+                    
+                }
+                
+                else {
+                    
+                    [String]$MessageText = "Something goes wrong - Exchange version unknown"
+                    
+                    $MessagesToReport += "`n$MessageText"
+                    
+                    If ($CreateReportFile -ne "None") {
+                        
+                        $MessagesToReport | Out-File -FilePath $PerServerReportFile.OutputFilePath
+                        
+                    }
+                    
+                    Throw $MessageText
+                    
+                }
+     
             }
-            
-<#
-            #This part is temporary (disabled) due that Exchange 2013 is using other events to 
-            
-            elseif (($MailboxServerVersion.Major -eq 15)) {
-                
-                # $CurrentRepairRequest = New-MailboxRepairRequest -Database $_.Name -CorruptionType SearchFolder, FolderView, AggregateCounts, ProvisionedFolder, ReplState, MessagePTAGCn, MessageID, RuleMessageClass, RestrictionFolder, FolderACL, UniqueMidIndex, CorruptJunkRule, MissingSpecialFolders, DropAllLazyIndexes, ImapID, ScheduledCheck, Extension1, Extension2, Extension3, Extension4, Extension5 -DetectOnly:$DetectOnly
-                
-                $CurrentRepairRequest = New-MailboxRepairRequest -Database $_.Name -CorruptionType "SearchFolder", "AggregateCounts", "ProvisionedFolder", "FolderView", "MessagePTagCn" -DetectOnly:$DetectOnly -Force
-                
-            }
-            
+            Catch {
+          
+                [String]$MessageText = "Under invoking New-MailboxRepairRequest on {0} error occured: {1} " -f $CurrentDatabase.Name, $Error[0]
 
-            elseif (($MailboxServerVersion.Major -eq 16)) {
-                
-                [String]$MessageText = "Exchange 2016 is not supported yet. Sorry ;-)"
-                
-                Throw $MessageText
-                
-            }
-            
-#>
-            else {
-                
-                [String]$MessageText = "Something goes wrong - Exchange version unknown"
-                
                 $MessagesToReport += "`n$MessageText"
                 
+                
                 If ($CreateReportFile -ne "None") {
+                    
                     
                     $MessagesToReport | Out-File -FilePath $PerServerReportFile.OutputFilePath
                     
                 }
                 
                 Throw $MessageText
-                
+  
             }
             
             Start-Sleep -Seconds 1
             
             [Int]$ExpectedDurationStartWait = 5
             
-            [int]$i = $CheckProgressEverySeconds
+            [int]$i = 1
             
             do {
                 
@@ -502,7 +539,10 @@
                     
                     if (($i += $CheckProgressEverySeconds) -ge ($ExpectedDurationStartWait * 60)) {
                         
+                        Write-Host $($i += $CheckProgressEverySeconds)
+                        
                         $i = $CheckProgressEverySeconds
+                        
                     }
                     Else {
                         
@@ -522,12 +562,8 @@
                     
                     Write-Verbose -Message $MessageText
                     
-                    $MonitoredEvents | foreach {
-                        
-                        $EventsToReport += $_
-                        
-                    }
-                    
+                    $EventsToReport += $MonitoredEvents
+                   
                 }
                 
                 $ErrorEvents = ($MonitoredEvents | where { $_.EventId -ne 10059 })
@@ -542,14 +578,20 @@
                     
                     Write-Error -Message $MessageText
                     
-                    Remove-Variable -Name MonitoredEvents
+                    Clear-Variable -Name MonitoredEvents
+                    
+                    $StopTimeForDatabase = Get-Date
+                    
+                    $DurationTimeForDatabase = New-TimeSpan -Start $StartTimeForDatabase -End $StopTimeForDatabase
                     
                     #Exit from current loop iteration - check the next database
                     Continue
                     
                 }
                 
-                $StartRepairEventFound = ((($MonitoredEvents | Where { $_.EventId -ne 10059 }) | measure).count -eq 1)
+                $StartRepairEvent = ($MonitoredEvents | Where { $_.EventId -eq 10059 })
+                
+                $StartRepairEventFound = (($StartRepairEvent | measure).count -eq 1)
                 
                 If (-not $MonitoredEvents) {
                     
@@ -567,21 +609,20 @@
                     
                     Write-Verbose -Message $MessageText
                     
-                    Remove-Variable -Name MonitoredEvents
+                    Clear-Variable -Name MonitoredEvents
                     
                 }
                 
             }
-            while ($StartRepairEventFound -eq $false)
-            
+            while ($StartRepairEventFound -eq $false -and $ErrorEventsFound -eq $false)
             
             Start-Sleep -Seconds 1
             
-            [int]$i = $CheckProgressEverySeconds
+            [int]$i = 1
             
             do {
                 
-                $MonitoredEvents = Get-EventsBySource -ComputerName $ComputerFQDNName -LogName "Application" -ProviderName "MSExchangeIS Mailbox Store" -EventID 10049, 10050, 10051, 10059 -StartTime $StartTimeForDatabase -Verbose:$false
+                $MonitoredEvents = Get-EventsBySource -ComputerName $ComputerFQDNName -LogName "Application" -ProviderName "MSExchangeIS Mailbox Store" -EventID 10045, 10048, 10049, 10050, 10051 -StartTime $StartTimeForDatabase -Verbose:$false
                 
                 If (($MonitoredEvents | measure).count -ge 1) {
                     
@@ -605,20 +646,26 @@
                 
                 If ($ErrorEventsFound) {
                     
-                    [where]$MessageText = "Under checking database {0} error occured - event ID  {1} " -f $_.Name, $ErrorEvents.EventId
+                    [String]$MessageText = "Under checking database {0} error occured - event ID  {1} " -f $_.Name, $ErrorEvents.EventId
                     
                     Write-Error -Message $MessageText
                     
                     $MessagesToReport += "`n$MessageText"
                     
-                    Remove-Variable -Name MonitoredEvents
+                    Clear-Variable -Name MonitoredEvents
+                    
                     
                     #Exit from current loop iteration - check the next database
+                    
+                    $StopTimeForDatabase = Get-Date
+                    
+                    $DurationTimeForDatabase = New-TimeSpan -Start $StartTimeForDatabase -End $StopTimeForDatabase
+                    
                     Continue
                     
                 }
                 
-                $StopRepairEvent = ((($MonitoredEvents | Where { $_.EventId -ne 10048 }) | measure).count -eq 1)
+                $StopRepairEvent = ($MonitoredEvents | Where { $_.EventId -eq 10048 })
                 
                 $StopRepairEventFound = (($StopRepairEvent | measure).count -eq 1)
                 
@@ -634,6 +681,7 @@
                             
                             $i = $CheckProgressEverySeconds
                         }
+                        
                         Else {
                             
                             $i += $CheckProgressEverySeconds
@@ -645,6 +693,7 @@
                     Start-Sleep -Seconds $CheckProgressEverySeconds
                     
                 }
+                
                 Else {
                     
                     [String]$MessageText = "Repair request for database {0} end at {1}" -f $_.Name, $StopRepairEvent.TimeGenerated
@@ -653,13 +702,37 @@
                     
                     Write-Verbose -Message $MessageText
                     
+                    If ($CreateReportFile -eq 'CreatePerDatabase') {
+                        
+                        $MessagesToReport | Set-Content -Path $PerDatabaseReportFile.OutputFilePath
+                        
+                        [String]$EmptyLine = "`n"
+                        
+                        $EmptyLine | Add-Content -Path $PerDatabaseReportFile.OutputFilePath
+                        
+                        $EventsToReport | Add-Content -Path $PerDatabaseReportFile.OutputFilePath
+                        
+                        $EmptyLine | Add-Content -Path $PerDatabaseReportFile.OutputFilePath
+                        
+                        $Events10062DetailsToReport | Add-Content -Path $PerDatabaseReportFile.OutputFilePath
+                        
+                    }
+                    
                     If ($DisplaySummary) {
                         
                         $CorruptionFoundEvents = Get-EventsBySource -ComputerName $ComputerFQDNName -LogName "Application" -ProviderName "MSExchangeIS Mailbox Store" -EventID 10062 -StartTime $StartTimeForDatabase -Verbose:$false
                         
                         $CorruptionFoundEventsCount = ($CorruptionFoundEvents | measure).count
                         
-                        If ($CorruptionFoundEventsCount -ge 1) {
+                        if ($CorruptionFoundEventsCount -ge 1) {
+                            
+                            $Events10062Details = Parse10062Events -Events $CorruptionFoundEvents
+                            
+                            $Events10062Details | foreach {
+                                
+                                $Events10062DetailsToReport += $_
+                                
+                            }
                             
                             Write-Output $CorruptionFoundEvents
                             
@@ -670,7 +743,8 @@
                 }
                 
             }
-            while ($StopRepairEventFound -eq $false)
+            
+            while ($StopRepairEventFound -eq $false -and $ErrorEventsFound -eq $false)
             
         }
         
@@ -678,18 +752,18 @@
     
     End {
         
-        $EndTimeForServer = Get-Date
+        $StopTimeForServer = Get-Date
         
-        $DurationTimeForServer = New-TimeSpan -Start $StartTimeForServer -End $EndTimeForServer
+        $DurationTimeForServer = New-TimeSpan -Start $StartTimeForServer -End $StopTimeForServer
         
         [String]$MessageText = "Operation for server {0} ended at {1}, operation duration time: {2} days, {3} hours, {4} minutes, {5} seconds" `
-        -f $ComputerNetBIOSName, $EndTimeForServer, $DurationTimeForServer.Days, $DurationTimeForServer.Hours, $DurationTimeForServer.Minutes, $DurationTimeForServer.Secounds
+        -f $ComputerNetBIOSName, $StopTimeForServer, $DurationTimeForServer.Days, $DurationTimeForServer.Hours, $DurationTimeForServer.Minutes, $DurationTimeForServer.Seconds
         
         $MessagesToReport += "`n$MessageText"
         
-        Write-Verbose -Message $MessageText        
+        Write-Verbose -Message $MessageText
         
-        If ($CreateReportFile -ne "None") {
+        If ($CreateReportFile -eq "CreatePerServer") {
             
             $MessagesToReport | Set-Content -Path $PerServerReportFile.OutputFilePath
             
@@ -697,7 +771,11 @@
             
             $EmptyLine | Add-Content -Path $PerServerReportFile.OutputFilePath
             
-            $EventsToReport | Add-Content -Path $PerServerReportFile.OutputFilPath
+            $EventsToReport | Add-Content -Path $PerServerReportFile.OutputFilePath
+            
+            $EmptyLine | Add-Content -Path $PerServerReportFile.OutputFilePath
+            
+            $Events10062DetailsToReport | Add-Content -Path $PerServerReportFile.OutputFilePath
             
         }
         
@@ -741,7 +819,6 @@ Function New-OutputFileNameFullPath {
     
     .PARAMETER BreakIfError
     Break function execution if parameters provided for output file creation are not correct or destination file path is not writables
-    
 
     .EXAMPLE
        
@@ -829,8 +906,7 @@ Function New-OutputFileNameFullPath {
         [String]$DateTimePartInFileNameString = $(Get-Date $DateTimePartInOutputFileName -format yyyyMMdd-HHmm)
         
     }
-    
-    
+        
     #Check if Output directory exist and try create if not
     If ($CreateOutputFileDirectory -and !$((Get-Item -Path $OutputFileDirectoryPath -ErrorAction SilentlyContinue) -is [system.io.directoryinfo])) {
         
@@ -1420,7 +1496,6 @@ Function Get-EventsBySource {
         }
         
     }
-    
     
     END {
         
