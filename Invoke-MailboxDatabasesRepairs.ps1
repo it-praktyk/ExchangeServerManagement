@@ -196,21 +196,21 @@
         $Events10062DetailsToReport = @()
         
         [Bool]$IsRunningOnLocalhost = $false
-        
+                
         [Bool]$StartRepairEventFound = $false
         
         [Bool]$StopRepairEventFound = $false
         
         $StartTimeForServer = Get-Date
-        
+                
         $StartTimeForServerString = $(Get-Date $StartTimeForServer -format yyyyMMdd-HHmm)
         
         If ((Test-ExchangeCmdletsAvailability) -ne $true) {
-            
+
             [String]$MessageText = "The function Invoke-MailboxDatabasesReapairs need to be run using Exchange Management Shell"
             
             $MessagesToReport += "`n$MessageText"
-            
+
             If ($CreateReportFile -ne "None") {
                 
                 $MessagesToReport | Out-File -FilePath $PerServerReportFile.OutputFilePath
@@ -218,7 +218,7 @@
             }
             
             Throw $MessageText
-            
+ 
         }
         
         If ($ComputerName -eq 'localhost') {
@@ -316,7 +316,7 @@
                 $MessagesToReport | Out-File -FilePath $PerServerReportFile.OutputFilePath
                 
             }
-            
+
             Throw $MessageText
         }
         
@@ -371,7 +371,7 @@
                     $MessagesToReport | Out-File -FilePath $PerServerReportFile.OutputFilePath
                     
                 }
-                
+
                 Throw $MessageText
                 
             }
@@ -426,9 +426,9 @@
         }
         
     }
-    
+
     Process {
-        
+       
         $ActiveDatabases | foreach {
             
             #Current time need to be compared between localhost and destination host to avoid mistakes
@@ -504,12 +504,12 @@
                     Throw $MessageText
                     
                 }
-                
+     
             }
             Catch {
-                
+          
                 [String]$MessageText = "Under invoking New-MailboxRepairRequest on {0} error occured: {1} " -f $CurrentDatabase.Name, $Error[0]
-                
+
                 $MessagesToReport += "`n$MessageText"
                 
                 
@@ -521,7 +521,7 @@
                 }
                 
                 Throw $MessageText
-                
+  
             }
             
             Start-Sleep -Seconds 1
@@ -564,7 +564,7 @@
                     Write-Verbose -Message $MessageText
                     
                     $EventsToReport += $MonitoredEvents
-                    
+                   
                 }
                 
                 $ErrorEvents = ($MonitoredEvents | where { $_.EventId -ne 10059 })
@@ -712,7 +712,7 @@
                         $EmptyLine | Add-Content -Path $PerDatabaseReportFile.OutputFilePath
                         
                         $EventsToReport | Add-Content -Path $PerDatabaseReportFile.OutputFilePath
-                        
+
                         $EmptyLine | Add-Content -Path $PerDatabaseReportFile.OutputFilePath
                         
                         $Events10062DetailsToReport | Add-Content -Path $PerDatabaseReportFile.OutputFilePath
@@ -917,7 +917,7 @@ Function New-OutputFileNameFullPath {
         [String]$DateTimePartInFileNameString = $(Get-Date $DateTimePartInOutputFileName -format yyyyMMdd-HHmm)
         
     }
-    
+        
     #Check if Output directory exist and try create if not
     If ($CreateOutputFileDirectory -and !$((Get-Item -Path $OutputFileDirectoryPath -ErrorAction SilentlyContinue) -is [system.io.directoryinfo])) {
         
