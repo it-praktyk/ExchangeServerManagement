@@ -108,9 +108,10 @@
     0.5.1 - 2015-09-14 - Help updated, TO DO section updated, DEPENDENCIES section updated
     0.6.0 - 2015-09-14 - Log creation capabilities updates, parsing 10062 events added
     0.6.1 - 2015-09-15 - Logging per database corrected
-    0.6.2 - 2015-10-18 - Named regions partially added, function Parse10062Events corrected based on PSScriptAnalyzer rules,
+    0.6.2 - 2015-10-20 - Named regions partially added, function Parse10062Events corrected based on PSScriptAnalyzer rules,
                          function New-OutputFileNameFullPath updated to version 0.4.0, reports per server changed,
                          function Get-EventsBySource updated to version 0.5.0
+    0.6.3 - 2015-10-21 - Date for version 0.6.2 corrected
         
 
     DEPENDENCIES
