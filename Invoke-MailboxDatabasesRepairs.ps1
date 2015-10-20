@@ -108,14 +108,17 @@
     0.5.1 - 2015-09-14 - Help updated, TO DO section updated, DEPENDENCIES section updated
     0.6.0 - 2015-09-14 - Log creation capabilities updates, parsing 10062 events added
     0.6.1 - 2015-09-15 - Logging per database corrected
+    0.6.2 - 2015-10-18 - Named regions partially added, function Parse10062Events corrected based on PSScriptAnalyzer rules,
+                         function New-OutputFileNameFullPath updated to version 0.4.0, reports per server changed,
+                         function Get-EventsBySource updated to version 0.5.0
         
 
     DEPENDENCIES
     -   Function Test-ExchangeCmdletsAvailability - minimum 0.1.2
         https://github.com/it-praktyk/Test-ExchangeCmdletsAvailability
-    -   Function Function Get-EventsBySource - minimum 0.3.2
+    -   Function Function Get-EventsBySource - minimum 0.5.0
         https://github.com/it-praktyk/Get-EvenstBySource
-    -   Function New-OutputFileNameFullPath - minimum 0.3.0
+    -   Function New-OutputFileNameFullPath - minimum 0.4.0
         https://github.com/it-praktyk/New-OutputFileNameFullPath
 
     TO DO
@@ -141,6 +144,9 @@
 #>
     
     [cmdletbinding()]
+    
+    #region parameters
+    
     param
     (
         [parameter(Mandatory = $false)]
@@ -183,43 +189,34 @@
         
     )
     
+    #endregion
+    
     Begin {
+        
+        #region Initialize variables
         
         $ActiveDatabases = @()
         
         $MessagesToReport = @()
-        
-        $PerServerMessagesToReport = @()
         
         $EventsToReport = @()
         
         $Events10062DetailsToReport = @()
         
         [Bool]$IsRunningOnLocalhost = $false
-                
+        
         [Bool]$StartRepairEventFound = $false
         
         [Bool]$StopRepairEventFound = $false
         
         $StartTimeForServer = Get-Date
-                
+        
         $StartTimeForServerString = $(Get-Date $StartTimeForServer -format yyyyMMdd-HHmm)
         
-        If ((Test-ExchangeCmdletsAvailability) -ne $true) {
-
-            [String]$MessageText = "The function Invoke-MailboxDatabasesReapairs need to be run using Exchange Management Shell"
-            
-            $MessagesToReport += "`n$MessageText"
-
-            If ($CreateReportFile -ne "None") {
-                
-                $MessagesToReport | Out-File -FilePath $PerServerReportFile.OutputFilePath
-                
-            }
-            
-            Throw $MessageText
- 
-        }
+        #endregion
+        
+        
+        #region Initialize a computer names
         
         If ($ComputerName -eq 'localhost') {
             
@@ -253,6 +250,10 @@
         
         Write-Verbose -Message $MessageText
         
+        #endregion
+        
+        #region Initialize reports files names
+        
         #Creating name for the report, a report file will be used for save initial errors or all messages if CreatePerServer report will be selected
         
         if ($CreateReportFile -ne 'None') {
@@ -268,12 +269,48 @@
                 
             }
             
-            $PerServerReportFile = New-OutputFileNameFullPath -OutputFileDirectoryPath $ReportFileDirectoryPath -OutputFileNamePrefix $ReportPerServerNamePrefix `
-                                                              -OutputFileNameMidPart $ReportFileNameMidPart `
-                                                              -IncludeDateTimePartInOutputFileName:$IncludeDateTimePartInReportFileName `
-                                                              -DateTimePartInOutputFileName $StartTimeForServer -BreakIfError:$BreakOnReportCreationError
+            $PerServerReportFileMessages = New-OutputFileNameFullPath -OutputFileDirectoryPath $ReportFileDirectoryPath -OutputFileNamePrefix $ReportPerServerNamePrefix `
+                                                                      -OutputFileNameMidPart $ReportFileNameMidPart `
+                                                                      -IncludeDateTimePartInOutputFileName:$IncludeDateTimePartInReportFileName `
+                                                                      -DateTimePartInOutputFileName $StartTimeForServer `
+                                                                      -OutputFileNameSuffix 'messages' -BreakIfError:$BreakOnReportCreationError
+            
+            $PerServerReportFileEvents = New-OutputFileNameFullPath -OutputFileDirectoryPath $ReportFileDirectoryPath -OutputFileNamePrefix $ReportPerServerNamePrefix `
+                                                                    -OutputFileNameMidPart $ReportFileNameMidPart `
+                                                                    -IncludeDateTimePartInOutputFileName:$IncludeDateTimePartInReportFileName `
+                                                                    -DateTimePartInOutputFileName $StartTimeForServer `
+                                                                    -OutputFileNameSuffix 'events' -BreakIfError:$BreakOnReportCreationError
+            
+            $PerServerReportFileCorruptionsDetails = New-OutputFileNameFullPath -OutputFileDirectoryPath $ReportFileDirectoryPath -OutputFileNamePrefix $ReportPerServerNamePrefix `
+                                                                      -OutputFileNameMidPart $ReportFileNameMidPart `
+                                                                      -IncludeDateTimePartInOutputFileName:$IncludeDateTimePartInReportFileName `
+                                                                      -DateTimePartInOutputFileName $StartTimeForServer `
+                                                                      -OutputFileNameSuffix 'corruptions_details' -BreakIfError:$BreakOnReportCreationError
+            
             
         }
+        
+        #endregion
+        
+        #region Initial EMS test
+        
+        If ((Test-ExchangeCmdletsAvailability) -ne $true) {
+            
+            [String]$MessageText = "The function Invoke-MailboxDatabasesReapairs need to be run using Exchange Management Shell"
+            
+            $MessagesToReport += "`n$MessageText"
+            
+            If ($CreateReportFile -ne "None") {
+                
+                $MessagesToReport | Out-File -FilePath $PerServerReportFileMessages.OutputFilePath
+                
+            }
+            
+            Throw $MessageText
+            
+        }
+        
+        #endregion
         
         #If parameter has value which is array something like this "[Text2, System.String[]]" will be added to log/message
         [String]$MessageText = "Operation started at {0} with parameters {1} " -f $StartTimeForServer, "Not implemented yet :-(" #, $PSBoundParameters.GetEnumerator()
@@ -284,7 +321,7 @@
         
         $MailboxServer = (Get-MailboxServer -Identity $ComputerNetBIOSName)
         
-        [Int]$MailboxServerCount = ($MailboxServer | Measure).Count
+        [Int]$MailboxServerCount = (Measure-Object -InputObject $MailboxServer ).Count
         
         If ($MailboxServerCount -gt 1) {
             
@@ -296,7 +333,7 @@
             If ($CreateReportFile -ne "None") {
                 
                 
-                $MessagesToReport | Out-File -FilePath $PerServerReportFile.OutputFilePath
+                $MessagesToReport | Out-File -FilePath $PerServerReportFileMessages.OutputFilePath
                 
             }
             
@@ -313,10 +350,10 @@
             If ($CreateReportFile -ne "None") {
                 
                 
-                $MessagesToReport | Out-File -FilePath $PerServerReportFile.OutputFilePath
+                $MessagesToReport | Out-File -FilePath $PerServerReportFileMessages.OutputFilePath
                 
             }
-
+            
             Throw $MessageText
         }
         
@@ -368,10 +405,10 @@
                 
                 If ($CreateReportFile -ne "None") {
                     
-                    $MessagesToReport | Out-File -FilePath $PerServerReportFile.OutputFilePath
+                    $MessagesToReport | Out-File -FilePath $PerServerReportFileMessages.OutputFilePath
                     
                 }
-
+                
                 Throw $MessageText
                 
             }
@@ -385,7 +422,7 @@
         }
         Else {
             
-            $Database | foreach {
+            $Database | ForEach-Object -Process {
                 
                 Try {
                     
@@ -413,7 +450,7 @@
             }
         }
         
-        [Int]$ActiveDatabasesCount = ($ActiveDatabases | measure).Count
+        [Int]$ActiveDatabasesCount = (Measure-Object -InputObject $ActiveDatabases).Count
         
         If ($ActiveDatabasesCount -lt 1) {
             
@@ -426,10 +463,10 @@
         }
         
     }
-
+    
     Process {
-       
-        $ActiveDatabases | foreach {
+        
+        $ActiveDatabases | ForEach-Object -Process {
             
             #Current time need to be compared between localhost and destination host to avoid mistakes
             $StartTimeForDatabase = Get-Date
@@ -497,31 +534,31 @@
                     
                     If ($CreateReportFile -ne "None") {
                         
-                        $MessagesToReport | Out-File -FilePath $PerServerReportFile.OutputFilePath
+                        $MessagesToReport | Out-File -FilePath $PerServerReportFileMessages.OutputFilePath
                         
                     }
                     
                     Throw $MessageText
                     
                 }
-     
+                
             }
             Catch {
-          
+                
                 [String]$MessageText = "Under invoking New-MailboxRepairRequest on {0} error occured: {1} " -f $CurrentDatabase.Name, $Error[0]
-
+                
                 $MessagesToReport += "`n$MessageText"
                 
                 
                 If ($CreateReportFile -ne "None") {
                     
                     
-                    $MessagesToReport | Out-File -FilePath $PerServerReportFile.OutputFilePath
+                    $MessagesToReport | Out-File -FilePath $PerServerReportFileMessages.OutputFilePath
                     
                 }
                 
                 Throw $MessageText
-  
+                
             }
             
             Start-Sleep -Seconds 1
@@ -555,7 +592,7 @@
                 
                 $MonitoredEvents = Get-EventsBySource -ComputerName $ComputerFQDNName -LogName "Application" -ProviderName "MSExchangeIS Mailbox Store" -EventID 10049, 10050, 10051, 10059 -StartTime $StartTimeForDatabase -Verbose:$false
                 
-                If (($MonitoredEvents | measure).count -ge 1) {
+                If ((Measure-Object -InputObject $MonitoredEvents).count -ge 1) {
                     
                     [String]$MessageText = "Events Found {0}" -f $MonitoredEvents
                     
@@ -564,12 +601,12 @@
                     Write-Verbose -Message $MessageText
                     
                     $EventsToReport += $MonitoredEvents
-                   
+                    
                 }
                 
                 $ErrorEvents = ($MonitoredEvents | where { $_.EventId -ne 10059 })
                 
-                $ErrorEventsFound = (($ErrorEvents | measure).count -ge 1)
+                $ErrorEventsFound = ((Measure-Object -InputObject $ErrorEvents).count -ge 1)
                 
                 If ($ErrorEventsFound) {
                     
@@ -592,7 +629,7 @@
                 
                 $StartRepairEvent = ($MonitoredEvents | Where { $_.EventId -eq 10059 })
                 
-                $StartRepairEventFound = (($StartRepairEvent | measure).count -eq 1)
+                $StartRepairEventFound = ((Measure-Object -InputObject $StartRepairEvent).count -eq 1)
                 
                 If (-not $MonitoredEvents) {
                     
@@ -625,7 +662,7 @@
                 
                 $MonitoredEvents = Get-EventsBySource -ComputerName $ComputerFQDNName -LogName "Application" -ProviderName "MSExchangeIS Mailbox Store" -EventID 10045, 10048, 10049, 10050, 10051 -StartTime $StartTimeForDatabase -Verbose:$false
                 
-                If (($MonitoredEvents | measure).count -ge 1) {
+                If ((Measure-Object -InputObject $MonitoredEvents ).count -ge 1) {
                     
                     [String]$MessageText = "Events Found {0}" -f $MonitoredEvents
                     
@@ -633,7 +670,7 @@
                     
                     Write-Verbose -Message $MessageText
                     
-                    $MonitoredEvents | foreach {
+                    $MonitoredEvents | ForEach-Object -Process {
                         
                         $EventsToReport += $_
                         
@@ -643,7 +680,7 @@
                 
                 $ErrorEvents = ($MonitoredEvents | where { $_.EventId -ne 10048 })
                 
-                $ErrorEventsFound = (($ErrorEvents | measure).count -ge 1)
+                $ErrorEventsFound = (( Measure-Object -InputObject $ErrorEvents).count -ge 1)
                 
                 If ($ErrorEventsFound) {
                     
@@ -668,7 +705,7 @@
                 
                 $StopRepairEvent = ($MonitoredEvents | Where { $_.EventId -eq 10048 })
                 
-                $StopRepairEventFound = (($StopRepairEvent | measure).count -eq 1)
+                $StopRepairEventFound = ((Measure-Object -InputObject $StopRepairEvent).count -eq 1)
                 
                 If (-not $StopRepairEventFound) {
                     
@@ -712,7 +749,7 @@
                         $EmptyLine | Add-Content -Path $PerDatabaseReportFile.OutputFilePath
                         
                         $EventsToReport | Add-Content -Path $PerDatabaseReportFile.OutputFilePath
-
+                        
                         $EmptyLine | Add-Content -Path $PerDatabaseReportFile.OutputFilePath
                         
                         $Events10062DetailsToReport | Add-Content -Path $PerDatabaseReportFile.OutputFilePath
@@ -723,19 +760,19 @@
                         
                         $CorruptionFoundEvents = Get-EventsBySource -ComputerName $ComputerFQDNName -LogName "Application" -ProviderName "MSExchangeIS Mailbox Store" -EventID 10062 -StartTime $StartTimeForDatabase -Verbose:$false
                         
-                        $CorruptionFoundEventsCount = ($CorruptionFoundEvents | measure).count
+                        $CorruptionFoundEventsCount = (Measure-Object -InputObject $CorruptionFoundEvents).count
                         
                         if ($CorruptionFoundEventsCount -ge 1) {
                             
                             $Events10062Details = Parse10062Events -Events $CorruptionFoundEvents
                             
-                            $Events10062Details | foreach {
+                            $Events10062Details | ForEach-Object -Process {
                                 
                                 $Events10062DetailsToReport += $_
                                 
                             }
                             
-                            Write-Output $CorruptionFoundEvents
+                            Write-Output -InputObject $CorruptionFoundEvents
                             
                         }
                         
@@ -774,21 +811,19 @@
         
         Write-Verbose -Message $MessageText
         
+        #region Write reports files to disk
+        
         If ($CreateReportFile -eq "CreatePerServer") {
             
-            $MessagesToReport | Set-Content -Path $PerServerReportFile.OutputFilePath
+            $MessagesToReport | Set-Content -Path $PerServerReportFileMessages.OutputFilePath
             
-            [String]$EmptyLine = "`n"
+            $EventsToReport | Add-Content -Path $PerServerReportFileEvents.OutputFilePath
             
-            $EmptyLine | Add-Content -Path $PerServerReportFile.OutputFilePath
-            
-            $EventsToReport | Add-Content -Path $PerServerReportFile.OutputFilePath
-            
-            $EmptyLine | Add-Content -Path $PerServerReportFile.OutputFilePath
-            
-            $Events10062DetailsToReport | Add-Content -Path $PerServerReportFile.OutputFilePath
+            $Events10062DetailsToReport | Add-Content -Path $PerServerReportFileCorruptionsDetails.OutputFilePath
             
         }
+        
+        #endregion
         
     }
     
@@ -814,7 +849,10 @@ Function New-OutputFileNameFullPath {
     Prefix used for creating output files name
     
     .PARAMETER OutputFileNameMidPart
-    Part of the name which will be used in midle of output iile name
+    Part of the name which will be used in midle of output file name
+    
+    .PARAMETER OutputFileNameSuffixPart
+    Part of the name which will be used at the end of output file name
     
     .PARAMETER IncludeDateTimePartInOutputFileName
     Set to TRUE if report file name should contains part based on date and time - format yyyyMMdd-HHmm is used
@@ -830,9 +868,21 @@ Function New-OutputFileNameFullPath {
     
     .PARAMETER BreakIfError
     Break function execution if parameters provided for output file creation are not correct or destination file path is not writables
-
+    
     .EXAMPLE
-       
+    
+    $PerServerReportFileMessages = New-OutputFileNameFullPath -OutputFileDirectoryPath 'C:\Reports' -OutputFileNamePrefix 'Messages' `
+                                                              -OutputFileNameMidPart 'COMPUTERNAME' `
+                                                              -IncludeDateTimePartInOutputFileName:$true `
+                                                              -BreakIfError:$true
+    
+    $PerServerReportFileMessages | Format-List
+    
+    OutputFilePath                                           ExitCode ExitCodeDescription
+    --------------                                           -------- -------------------
+    C:\users\wojtek\Messages-COMPUTERNAME-20151021-0012-.txt        0
+    
+    
      
     .LINK
     https://github.com/it-praktyk/New-OutputFileNameFullPath
@@ -848,12 +898,13 @@ Function New-OutputFileNameFullPath {
     0.1.0 - 2015-09-01 - Initial release
     0.1.1 - 2015-09-01 - Minor update
     0.2.0 - 2015-09-08 - Corrected, function renamed to New-OutputFileNameFullPath from New-ReportFileNameFullPath
-    0.3.0 - 2015-09-13 - implmentation for DateTimePartInFileName parameter corrected
+    0.3.0 - 2015-09-13 - implementation for DateTimePartInFileName parameter corrected, help updated, some parameters renamed
+    0.4.0 - 2015-10-20 - additional OutputFileNameSuffix parameter added, help updated, TODO updated
     
     TODO
-    Update help - example section
     Change/extend type of returned object 
     Change/extend behavior if file exist
+    Trim provided parameters, replace not standard chars ? 
 
         
     LICENSE
@@ -873,25 +924,27 @@ Function New-OutputFileNameFullPath {
     
     [cmdletbinding()]
     param (
-        
         [parameter(Mandatory = $false)]
         [String]$OutputFileDirectoryPath = ".\Outputs\",
         [parameter(Mandatory = $false)]
-        [Switch]$CreateOutputFileDirectory = $true,
+        [Bool]$CreateOutputFileDirectory = $true,
         [parameter(Mandatory = $false)]
         [String]$OutputFileNamePrefix = "Output-",
         [parameter(Mandatory = $false)]
-        [String]$OutputFileNameMidPart,
+        [String]$OutputFileNameMidPart = $null,
         [parameter(Mandatory = $false)]
-        [Switch]$IncludeDateTimePartInOutputFileName = $true,
+        [String]$OutputFileNameSuffix = $null,
         [parameter(Mandatory = $false)]
-        [DateTime]$DateTimePartInOutputFileName,
+        [Bool]$IncludeDateTimePartInOutputFileName = $true,
+        [parameter(Mandatory = $false)]
+        [Nullable[DateTime]]
+        $DateTimePartInOutputFileName = $null,
         [parameter(Mandatory = $false)]
         [String]$OutputFileNameExtension = ".txt",
         [parameter(Mandatory = $false)]
-        [Switch]$ErrorIfOutputFileExist = $true,
+        [Bool]$ErrorIfOutputFileExist = $true,
         [parameter(Mandatory = $false)]
-        [Switch]$BreakIfError = $true
+        [Bool]$BreakIfError = $true
         
     )
     
@@ -901,23 +954,23 @@ Function New-OutputFileNameFullPath {
     
     [String]$ExitCodeDescription = $null
     
-    $Result = New-Object PSObject
+    $Result = New-Object -TypeName PSObject
     
     #Convert relative path to absolute path
     [String]$OutputFileDirectoryPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutputFileDirectoryPath)
     
     #Assign value to the variable $IncludeDateTimePartInOutputFileName if is not initialized
-    If ($IncludeDateTimePartInOutputFileName -and $DateTimePartInOutputFileName -eq "") {
+    If ($IncludeDateTimePartInOutputFileName -and $DateTimePartInOutputFileName -eq $null) {
         
         [String]$DateTimePartInFileNameString = $(Get-Date -format yyyyMMdd-HHmm)
         
     }
     Else {
         
-        [String]$DateTimePartInFileNameString = $(Get-Date $DateTimePartInOutputFileName -format yyyyMMdd-HHmm)
+        [String]$DateTimePartInFileNameString = $(Get-Date -Date $DateTimePartInOutputFileName -format yyyyMMdd-HHmm)
         
     }
-        
+    
     #Check if Output directory exist and try create if not
     If ($CreateOutputFileDirectory -and !$((Get-Item -Path $OutputFileDirectoryPath -ErrorAction SilentlyContinue) -is [system.io.directoryinfo])) {
         
@@ -1004,28 +1057,38 @@ Function New-OutputFileNameFullPath {
         
     }
     
-    Remove-Item $TempFilePath -ErrorAction SilentlyContinue | Out-Null
-    
+    Remove-Item -Path $TempFilePath -ErrorAction SilentlyContinue | Out-Null
     
     #Constructing the file name
-    If (!($IncludeDateTimePartInOutputFileName) -and ($OutputFileNameMidPart -ne $null)) {
+    If (!($IncludeDateTimePartInOutputFileName) -and ($null -ne $OutputFileNameMidPart)) {
         
-        [String]$OutputFilePathTemp = "{0}\{1}-{2}.{3}" -f $OutputFileDirectoryPath, $OutputFileNamePrefix, $OutputFileNameMidPart, $OutputFileNameExtension
-        
-    }
-    Elseif (!($IncludeDateTimePartInOutputFileName) -and ($OutputFileNameMidPart -eq $null)) {
-        
-        [String]$OutputFilePathTemp = "{0}\{1}.{2}" -f $OutputFileDirectoryPath, $OutputFileNamePrefix, $OutputFileNameExtension
+        [String]$OutputFilePathTemp1 = "{0}\{1}-{2}" -f $OutputFileDirectoryPath, $OutputFileNamePrefix, $OutputFileNameMidPart
         
     }
-    ElseIf ($IncludeDateTimePartInOutputFileName -and ($OutputFileNameMidPart -ne $null)) {
+    Elseif (!($IncludeDateTimePartInOutputFileName) -and ($null -eq $OutputFileNameMidPart)) {
         
-        [String]$OutputFilePathTemp = "{0}\{1}-{2}-{3}.{4}" -f $OutputFileDirectoryPath, $OutputFileNamePrefix, $OutputFileNameMidPart, $DateTimePartInFileNameString, $OutputFileNameExtension
+        [String]$OutputFilePathTemp1 = "{0}\{1}" -f $OutputFileDirectoryPath, $OutputFileNamePrefix
+        
+    }
+    ElseIf ($IncludeDateTimePartInOutputFileName -and ($null -ne $OutputFileNameMidPart)) {
+        
+        [String]$OutputFilePathTemp1 = "{0}\{1}-{2}-{3}" -f $OutputFileDirectoryPath, $OutputFileNamePrefix, $OutputFileNameMidPart, $DateTimePartInFileNameString
         
     }
     Else {
         
-        [String]$OutputFilePathTemp = "{0}\{1}-{2}.{3}" -f $OutputFileDirectoryPath, $OutputFileNamePrefix, $DateTimePartInFileNameString, $OutputFileNameExtension
+        [String]$OutputFilePathTemp1 = "{0}\{1}-{2}" -f $OutputFileDirectoryPath, $OutputFileNamePrefix, $DateTimePartInFileNameString
+        
+    }
+    
+    If ($null -ne $OutputFileNameSuffix) {
+        
+        [String]$OutputFilePathTemp = "{0}-{1}.{2}" -f $OutputFilePathTemp1, $OutputFileNameSuffix, $OutputFileNameExtension
+        
+    }
+    Else {
+        
+        [String]$OutputFilePathTemp = "{0}.{1}" -f $OutputFilePathTemp1, $OutputFileNameExtension
         
     }
     
@@ -1078,7 +1141,7 @@ Function Parse10062Events {
     
     $option = [System.StringSplitOptions]::RemoveEmptyEntries
     
-    $CorruptionFoundEvents | ForEach {
+    $CorruptionFoundEvents | ForEach-Object -Process {
         
         If ($_.EventID -eq 10062) {
             
@@ -1086,11 +1149,11 @@ Function Parse10062Events {
             
             $MessageLines = ($_.Message).Split($separator, $option)
             
-            Write-Verbose "Lines to parse ($MessageLines | Measure).count"
+            Write-Verbose -Message "Lines to parse ($MessageLines | Measure).count"
             
             [Int]$i = 1
             
-            $MessageLines | ForEach {
+            $MessageLines | ForEach-Object -Process {
                 
                 [String]$Line = $_
                 
@@ -1123,7 +1186,7 @@ Function Parse10062Events {
                     
                     $f = 1
                     
-                    $Fields | ForEach {
+                    $Fields | ForEach-Object -Process {
                         
                         $Field = $_
                         
@@ -1291,26 +1354,72 @@ Function Test-ExchangeCmdletsAvailability {
 Function Get-EventsBySource {
 <#
     .SYNOPSIS
-    Function intended for remote gathering events data 
+    Function intended to gather data from Windows events logs - the function Get-EventsBySource is wrapper for Get-WinEvent function
+    
+    .DESCRIPTION
+    Function intended to gather data from Windows events logs - the function Get-EventsBySource is wrapper for Get-WinEvent function. Generally
+    the HashQuerySet parameter set is used but time span can be constructed based not only on start/end time but also 
+    
+    Function offer additional capabilities to merge multilines event description (using defined char as a lines separator)
+    and can limit amount of returned 
   
     .PARAMETER ComputerName
-   
+    Gets events from the event logs on the specified computer. Type the NetBIOS name, an Internet Protocol (IP) address,
+    or the fully qualified domain name of the computer. The default value is the local computer.
+       
     .PARAMETER LogName
+    Gets events from the specified event logs. Enter the event log names in a comma-separated list.
     
     .PARAMETER ProviderName
+    Gets events written by the specified event log providers. Enter the provider names in a comma-separated list, or use wildcard characters to create provider name patterns.
+    An event log provider is a program or service that writes events to the event log. It is not a Windows PowerShell provider.
+    Please remember that ProviderName is usually not equal with a source for event - please check an event XML to check used provider.
     
     .PARAMETER EventID
     
+    
+    .PARAMETER StartTime
+    Date and time which will be used as the begining of a time period to query
+    
+    .PARAMETER EndTime
+    Date and time which will be used as the end of a time period to query
+    
+    .PARAMETER ForLastTimeSpan
+    Use number for which logs need to be queried - please select also correct "ForLastTimeUnit" value
+    
+    .PARAMETER ForLastTimeUnit
+    Use the name of units for construct query.
+    
     .PARAMETER ConcatenateMessageLines
+    For multilines events description lines will be merged by default. Please change to $false if you would not like this behaviour, than only first line can be handled.
     
     .PARAMETER ConcatenatedLinesSeparator
+    A char used to separated merged multilines event description. By default "^" is used due that is not usually used in events descriptions.
     
     .PARAMETER MessageCharsAmount
+    The number of chars which will be returned from event description.
     
+    .INPUT
+    Cos
+    
+    .OUTPUT
+    Costam
      
     .EXAMPLE
-    Get-EventsBySource
-         
+    Get-EventsBySource -ComputerName localhost -LogName application -ProviderName SecurityCenter -EventID 1,16 -ForLastTimeSpan 160 -ForLastTimeUnit minutes
+
+    ComputerName  : COMPUTERNAME.wojteks.lab
+    Source        : SecurityCenter
+    EventID       : 16
+    TimeGenerated : 10/19/2015 10:48:26 PM
+    Message       : The Windows Security Center Service could not stop Windows Defender
+
+    ComputerName  : COMPUTERNAME.wojteks.lab
+    Source        : SecurityCenter
+    EventID       : 1
+    TimeGenerated : 10/19/2015 10:48:23 PM
+    Message       : The Windows Security Center Service has started
+    
     .LINK
     https://github.com/it-praktyk/Get-EvenstBySource
     
@@ -1319,15 +1428,34 @@ Function Get-EventsBySource {
           
     .NOTES
    
-    AUTHOR: Wojciech Sciesinski, wojciech.sciesinski@atos.net
-    KEYWORDS: Windows, Event logs
+    AUTHOR: Wojciech Sciesinski, wojciech[at]sciesinski[dot]net
+            Parameters description partially based on Get-WinEvent help from PowerShell 3.0
+    
+    KEYWORDS: Windows, Event logs, PowerShell
+    
     VERSION HISTORY
     0.3.1 - 2015-07-03 - Support for time span corrected, the first version published on GitHub
     0.3.2 - 2015-07-05 - Help updated, function corrected
-    
+    0.3.3 - 2015-08-25 - Help updated, to do updated
+    0.4.0 - 2015-09-08 - Code reformated, Added support for more than one event id, minor update
+    0.5.0 - 2015-10-19 - Code corrected based on PSScriptAnalyzer 1.1.0 output, support for more than logs (by name) added,
+                         help partially updated
+                         
 
     TODO
     - help update needed
+    - handle situation like
+    
+    PS > [Array]$FilterHashTable = @{ "Logname" = "Application"; "Id" = 900; "ProviderName" = "Microsoft-Windows-Security-SPP" }
+    PS > Get-WinEvent -FilterHashtable $FilterHashTable
+    
+    PS > Get-WinEvent -FilterHashtable $FilterHashTable
+    Get-WinEvent : The specified providers do not write events to any of the specified logs.
+    At line:1 char:1
+    + Get-WinEvent -FilterHashtable $FilterHashTable
+    + ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-WinEvent], Exception
+    + FullyQualifiedErrorId : LogsAndProvidersDontOverlap,Microsoft.PowerShell.Commands.GetWinEventCommand
     
         
     LICENSE
@@ -1346,19 +1474,23 @@ Function Get-EventsBySource {
 #>
     
     [CmdletBinding()]
+    [OutputType("System.Object[]")]
     param (
         [parameter(mandatory = $true)]
         [String]$ComputerName,
         [parameter(mandatory = $true)]
-        [String]$LogName,
+        [String[]]$LogName,
         [parameter(mandatory = $true)]
         [String]$ProviderName,
         [parameter(mandatory = $true)]
+        [alias("ID")]
         [Int[]]$EventID,
         [parameter(mandatory = $false, ParameterSetName = "StartEndTime")]
-        [DateTime]$StartTime,
+        [Nullable[DateTime]]
+        $StartTime = $null,
         [parameter(mandatory = $false, ParameterSetName = "StartEndTime")]
-        [DateTime]$EndTime,
+        [Nullable[DateTime]]
+        $EndTime = $null,
         [parameter(mandatory = $false, ParameterSetName = "ForLast")]
         [int]$ForLastTimeSpan = 24,
         [parameter(mandatory = $false, ParameterSetName = "ForLast")]
@@ -1380,8 +1512,6 @@ Function Get-EventsBySource {
     }
     
     PROCESS {
-        
-        $SkipServer = $false
         
         Try {
             
@@ -1449,56 +1579,50 @@ Function Get-EventsBySource {
             
             Write-Verbose -Message "Computer $ComputerName not accessible or error with access to $LogName event log."
             
-            [Bool]$SkipServer = $true
+            Continue
             
         }
         
         Finally {
             
+            $Found = $($Events | Measure-Object).Count
             
-            If (-not $SkipServer) {
+            If ($Found -ne 0) {
                 
+                [String]$MessageText = "For the computer $ComputerName events $Found found"
                 
-                $Found = $($Events | Measure-Object).Count
+                Write-Verbose -Message $MessageText
                 
-                If ($Found -ne 0) {
+                $Events | ForEach-Object -Process {
                     
-                    [String]$MessageText = "For the computer $ComputerName events $Found found"
+                    $Result = New-Object -TypeName PSObject
+                    $Result | Add-Member -type NoteProperty -name ComputerName -value $_.MachineName
+                    $Result | Add-Member -type NoteProperty -name Source -value $_.Providername
+                    $Result | Add-Member -type NoteProperty -name EventID -Value $_.ID
+                    $Result | Add-Member -type NoteProperty -name TimeGenerated -Value $_.TimeCreated
                     
-                    Write-Verbose -Message $MessageText
+                    $MessageLength = $($_.Message).Length
                     
-                    $Events | ForEach  {
+                    If (($MessageCharsAmount -eq -1) -or $MessageCharsAmount -gt $MessageLength) {
                         
-                        $Result = New-Object -TypeName PSObject
-                        $Result | Add-Member -type NoteProperty -name ComputerName -value $_.MachineName
-                        $Result | Add-Member -type NoteProperty -name Source -value $_.Providername
-                        $Result | Add-Member -type NoteProperty -name EventID -Value $_.ID
-                        $Result | Add-Member -type NoteProperty -name TimeGenerated -Value $_.TimeCreated
-                        
-                        $MessageLength = $($_.Message).Length
-                        
-                        If (($MessageCharsAmount -eq -1) -or $MessageCharsAmount -gt $MessageLength) {
-                            
-                            $MessageCharsAmount = $MessageLength
-                            
-                        }
-                        
-                        if ($ConcatenateMessageLines) {
-                            
-                            $MessageFields = $_.Message.Substring(0, $MessageCharsAmount - 1).Replace("`r`n", $ConcatenatedLinesSeparator)
-                            
-                            $Result | Add-Member -type NoteProperty -name Message -Value $MessageFields
-                            
-                        }
-                        else {
-                            
-                            $Result | Add-Member -type NoteProperty -name Message -Value $_.Message.Substring(0, $MessageCharsAmount - 1)
-                            
-                        }
-                        
-                        $Results += $Result
+                        $MessageCharsAmount = $MessageLength
                         
                     }
+                    
+                    if ($ConcatenateMessageLines) {
+                        
+                        $MessageFields = $_.Message.Substring(0, $MessageCharsAmount - 1).Replace("`r`n", $ConcatenatedLinesSeparator)
+                        
+                        $Result | Add-Member -type NoteProperty -name Message -Value $MessageFields
+                        
+                    }
+                    else {
+                        
+                        $Result | Add-Member -type NoteProperty -name Message -Value $_.Message.Substring(0, $MessageCharsAmount - 1)
+                        
+                    }
+                    
+                    $Results += $Result
                     
                 }
                 
@@ -1507,6 +1631,7 @@ Function Get-EventsBySource {
         }
         
     }
+    
     
     END {
         
