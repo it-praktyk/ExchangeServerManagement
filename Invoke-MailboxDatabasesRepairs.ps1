@@ -112,6 +112,7 @@
                          function New-OutputFileNameFullPath updated to version 0.4.0, reports per server changed,
                          function Get-EventsBySource updated to version 0.5.0
     0.6.3 - 2015-10-21 - Date for version 0.6.2 corrected
+    0.7.0 - 2015-10-21 - Reports per database changed, function corrected based on PSScriptAnalyzer rules, TO DO updated
         
 
     DEPENDENCIES
@@ -123,11 +124,12 @@
         https://github.com/it-praktyk/New-OutputFileNameFullPath
 
     TO DO
-    - improve store and/or mail summary report - add reports per database
+    - improve store and/or mail summary report - export as csv/xml/JSON
     - Current time and timezone need to be compared between localhost and destination host to avoid mistakes
     - exit code return need to be implemented
     - add support for Exchange 2013 (?) and 2016 (?)
     - add named regions to easier navigation in code 
+    - normalize displayed/logged messages
         
     LICENSE
     Copyright (C) 2015 Wojciech Sciesinski
@@ -212,8 +214,6 @@
         
         $StartTimeForServer = Get-Date
         
-        $StartTimeForServerString = $(Get-Date $StartTimeForServer -format yyyyMMdd-HHmm)
-        
         #endregion
         
         
@@ -283,10 +283,10 @@
                                                                     -OutputFileNameSuffix 'events' -BreakIfError:$BreakOnReportCreationError
             
             $PerServerReportFileCorruptionsDetails = New-OutputFileNameFullPath -OutputFileDirectoryPath $ReportFileDirectoryPath -OutputFileNamePrefix $ReportPerServerNamePrefix `
-                                                                      -OutputFileNameMidPart $ReportFileNameMidPart `
-                                                                      -IncludeDateTimePartInOutputFileName:$IncludeDateTimePartInReportFileName `
-                                                                      -DateTimePartInOutputFileName $StartTimeForServer `
-                                                                      -OutputFileNameSuffix 'corruptions_details' -BreakIfError:$BreakOnReportCreationError
+                                                                                -OutputFileNameMidPart $ReportFileNameMidPart `
+                                                                                -IncludeDateTimePartInOutputFileName:$IncludeDateTimePartInReportFileName `
+                                                                                -DateTimePartInOutputFileName $StartTimeForServer `
+                                                                                -OutputFileNameSuffix 'corruptions_details' -BreakIfError:$BreakOnReportCreationError
             
             
         }
@@ -322,7 +322,7 @@
         
         $MailboxServer = (Get-MailboxServer -Identity $ComputerNetBIOSName)
         
-        [Int]$MailboxServerCount = (Measure-Object -InputObject $MailboxServer ).Count
+        [Int]$MailboxServerCount = (Measure-Object -InputObject $MailboxServer).Count
         
         If ($MailboxServerCount -gt 1) {
             
@@ -365,12 +365,12 @@
             if ($IsRunningOnLocalhost) {
                 
                 
-                $ExchangeSetupFileVersion = Get-Command Exsetup.exe | select FileversionInfo
+                $ExchangeSetupFileVersion = Select-Object -InputObject $(Get-Command -Name Exsetup.exe) -Property FileversionInfo
                 
             }
             Else {
                 
-                $ExchangeSetupFileVersion = Invoke-Command -ComputerName $MailboxServer.Name -ScriptBlock { Get-Command Exsetup.exe | select FileversionInfo }
+                $ExchangeSetupFileVersion = Invoke-Command -ComputerName $MailboxServer.Name -ScriptBlock { Select-Object -InputObject $(Get-Command -Name Exsetup.exe) -Property FileversionInfo }
                 
             }
             
@@ -390,7 +390,7 @@
             
             $MessagesToReport += "`n$MessageText"
             
-            Write-Verbose $MessageText
+            Write-Verbose -Message $MessageText
             
             #Decision based on 
             
@@ -418,7 +418,7 @@
         
         If ($Database -eq 'All') {
             
-            $ActiveDatabases = (Get-MailboxDatabase -Server $ComputerNetBIOSName | where { $_.Server -match $ComputerNetBIOSName } | select Name)
+            $ActiveDatabases = (Get-MailboxDatabase -Server $ComputerNetBIOSName | Where-Object -FilterScript { $_.Server -match $ComputerNetBIOSName } | Select-Object -Property Name)
             
         }
         Else {
@@ -427,7 +427,7 @@
                 
                 Try {
                     
-                    $CurrentDatabase = (Get-MailboxDatabase -Identity $_ | where { $_.Server -match $ComputerNetBIOSName } | select Name)
+                    $CurrentDatabase = (Get-MailboxDatabase -Identity $_ | Where-Object -FilterScript { $_.Server -match $ComputerNetBIOSName } | Select-Object -Property Name)
                     
                 }
                 Catch {
@@ -459,7 +459,7 @@
             
             $MessagesToReport += "`n$MessageText"
             
-            Write-Error $MessageText
+            Write-Error -Message $MessageText
             
         }
         
@@ -486,9 +486,20 @@
                 }
                 
                 
-                $PerDatabaseReportFile = New-OutputFileNameFullPath -OutputFileDirectoryPath $ReportFileDirectoryPath -OutputFileNamePrefix $ReportPerDatabaseNamePrefix `
-                                                                    -IncludeDateTimePartInOutputFileName:$IncludeDateTimePartInReportFileName `
-                                                                    -DateTimePartInOutputFileName $StartTimeForDatabase -BreakIfError:$BreakOnReportCreationError
+                $PerDatabaseReportFileMessages = New-OutputFileNameFullPath -OutputFileDirectoryPath $ReportFileDirectoryPath -OutputFileNamePrefix $ReportPerDatabaseNamePrefix `
+                                                                            -IncludeDateTimePartInOutputFileName:$IncludeDateTimePartInReportFileName `
+                                                                            -DateTimePartInOutputFileName $StartTimeForDatabase `
+                                                                            -OutputFileNameSuffix 'messages' -BreakIfError:$BreakOnReportCreationError
+                
+                $PerDatabaseReportFileEvents = New-OutputFileNameFullPath -OutputFileDirectoryPath $ReportFileDirectoryPath -OutputFileNamePrefix $ReportPerDatabaseNamePrefix `
+                                                                          -IncludeDateTimePartInOutputFileName:$IncludeDateTimePartInReportFileName `
+                                                                          -DateTimePartInOutputFileName $StartTimeForDatabase `
+                                                                          -OutputFileNameSuffix 'events' -BreakIfError:$BreakOnReportCreationError
+                
+                $PerDatabaseReportFileCorruptionsDetails = New-OutputFileNameFullPath -OutputFileDirectoryPath $ReportFileDirectoryPath -OutputFileNamePrefix $ReportPerDatabaseNamePrefix `
+                                                                                      -IncludeDateTimePartInOutputFileName:$IncludeDateTimePartInReportFileName `
+                                                                                      -DateTimePartInOutputFileName $StartTimeForDatabase `
+                                                                                      -OutputFileNameSuffix 'corruption_details' -BreakIfError:$BreakOnReportCreationError
                 
             }
             
@@ -496,7 +507,7 @@
             
             Try {
                 
-                $CurrentDatabase = (Get-MailboxDatabase -Identity $_.Name | where { $_.Server -match $ComputerNetBIOSName } | select Name)
+                $CurrentDatabase = (Get-MailboxDatabase -Identity $_.Name | Where-Object -FilterScript { $_.Server -match $ComputerNetBIOSName } | Select-Object -Property Name)
                 
             }
             Catch {
@@ -523,7 +534,7 @@
                 
                 if ($MailboxServerVersion.Major -eq 14) {
                     
-                    $CurrentRepairRequest = New-MailboxRepairRequest -Database $_.Name -CorruptionType "SearchFolder", "AggregateCounts", "ProvisionedFolder", "FolderView", "MessagePTagCn" -DetectOnly:$DetectOnly -ErrorAction Stop
+                    New-MailboxRepairRequest -Database $_.Name -CorruptionType "SearchFolder", "AggregateCounts", "ProvisionedFolder", "FolderView", "MessagePTagCn" -DetectOnly:$DetectOnly -ErrorAction Stop
                     
                 }
                 
@@ -578,8 +589,6 @@
                     
                     if (($i += $CheckProgressEverySeconds) -ge ($ExpectedDurationStartWait * 60)) {
                         
-                        Write-Host $($i += $CheckProgressEverySeconds)
-                        
                         $i = $CheckProgressEverySeconds
                         
                     }
@@ -605,7 +614,7 @@
                     
                 }
                 
-                $ErrorEvents = ($MonitoredEvents | where { $_.EventId -ne 10059 })
+                $ErrorEvents = ($MonitoredEvents | Where-Object -FilterScript { $_.EventId -ne 10059 })
                 
                 $ErrorEventsFound = ((Measure-Object -InputObject $ErrorEvents).count -ge 1)
                 
@@ -628,7 +637,7 @@
                     
                 }
                 
-                $StartRepairEvent = ($MonitoredEvents | Where { $_.EventId -eq 10059 })
+                $StartRepairEvent = ($MonitoredEvents | Where-Object -FilterScript { $_.EventId -eq 10059 })
                 
                 $StartRepairEventFound = ((Measure-Object -InputObject $StartRepairEvent).count -eq 1)
                 
@@ -640,7 +649,7 @@
                 
                 Else {
                     
-                    [String]$StartTime = Get-Date $($StartRepairEvent.TimeGenerated) -format yyyyMMdd-HHmm
+                    [String]$StartTime = Get-Date -Date $($StartRepairEvent.TimeGenerated) -format yyyyMMdd-HHmm
                     
                     [String]$MessageText = "Repair request for database {0} started at {1}" -f $_.Name, $StartRepairEvent.TimeGenerated
                     
@@ -663,7 +672,7 @@
                 
                 $MonitoredEvents = Get-EventsBySource -ComputerName $ComputerFQDNName -LogName "Application" -ProviderName "MSExchangeIS Mailbox Store" -EventID 10045, 10048, 10049, 10050, 10051 -StartTime $StartTimeForDatabase -Verbose:$false
                 
-                If ((Measure-Object -InputObject $MonitoredEvents ).count -ge 1) {
+                If ((Measure-Object -InputObject $MonitoredEvents).count -ge 1) {
                     
                     [String]$MessageText = "Events Found {0}" -f $MonitoredEvents
                     
@@ -679,9 +688,9 @@
                     
                 }
                 
-                $ErrorEvents = ($MonitoredEvents | where { $_.EventId -ne 10048 })
+                $ErrorEvents = ($MonitoredEvents | Where-Object -FilterScript { $_.EventId -ne 10048 })
                 
-                $ErrorEventsFound = (( Measure-Object -InputObject $ErrorEvents).count -ge 1)
+                $ErrorEventsFound = ((Measure-Object -InputObject $ErrorEvents).count -ge 1)
                 
                 If ($ErrorEventsFound) {
                     
@@ -704,7 +713,7 @@
                     
                 }
                 
-                $StopRepairEvent = ($MonitoredEvents | Where { $_.EventId -eq 10048 })
+                $StopRepairEvent = ($MonitoredEvents | Where-Object -FilterScript { $_.EventId -eq 10048 })
                 
                 $StopRepairEventFound = ((Measure-Object -InputObject $StopRepairEvent).count -eq 1)
                 
@@ -741,53 +750,44 @@
                     
                     Write-Verbose -Message $MessageText
                     
+                    $CorruptionFoundEvents = Get-EventsBySource -ComputerName $ComputerFQDNName -LogName "Application" -ProviderName "MSExchangeIS Mailbox Store" -EventID 10062 -StartTime $StartTimeForDatabase -Verbose:$false
+                    
+                    $CorruptionFoundEventsCount = (Measure-Object -InputObject $CorruptionFoundEvents).count
+                    
+                    if ($CorruptionFoundEventsCount -ge 1) {
+                        
+                        $Events10062Details = Parse10062Events -Events $CorruptionFoundEvents
+                        
+                        $Events10062Details | ForEach-Object -Process {
+                            
+                            $Events10062DetailsToReport += $_
+                            
+                        }
+                        
+                    }
+                    
                     If ($CreateReportFile -eq 'CreatePerDatabase') {
                         
-                        $MessagesToReport | Set-Content -Path $PerDatabaseReportFile.OutputFilePath
+                        $MessagesToReport | Set-Content -Path $PerDatabaseReportFileMessages.OutputFilePath
                         
-                        [String]$EmptyLine = "`n"
+                        $EventsToReport | Add-Content -Path $PerDatabaseReportFileEvents.OutputFilePath
                         
-                        $EmptyLine | Add-Content -Path $PerDatabaseReportFile.OutputFilePath
+                        $Events10062DetailsToReport | Add-Content -Path $PerDatabaseReportFileCorruptionsDetails.OutputFilePath
                         
-                        $EventsToReport | Add-Content -Path $PerDatabaseReportFile.OutputFilePath
+                        Clear-Variable -Name MessagesToReport -ErrorAction 'SilentlyContinue'
                         
-                        $EmptyLine | Add-Content -Path $PerDatabaseReportFile.OutputFilePath
+                        Clear-Variable -Name EventsToReport -ErrorAction 'SilentlyContinue'
                         
-                        $Events10062DetailsToReport | Add-Content -Path $PerDatabaseReportFile.OutputFilePath
+                        Clear-Variable -Name Event10062DetailsToReport -ErrorAction 'SilentlyContinue'
                         
                     }
                     
                     If ($DisplaySummary) {
                         
-                        $CorruptionFoundEvents = Get-EventsBySource -ComputerName $ComputerFQDNName -LogName "Application" -ProviderName "MSExchangeIS Mailbox Store" -EventID 10062 -StartTime $StartTimeForDatabase -Verbose:$false
-                        
-                        $CorruptionFoundEventsCount = (Measure-Object -InputObject $CorruptionFoundEvents).count
-                        
-                        if ($CorruptionFoundEventsCount -ge 1) {
-                            
-                            $Events10062Details = Parse10062Events -Events $CorruptionFoundEvents
-                            
-                            $Events10062Details | ForEach-Object -Process {
-                                
-                                $Events10062DetailsToReport += $_
-                                
-                            }
-                            
-                            Write-Output -InputObject $CorruptionFoundEvents
-                            
-                        }
-                        
-                        If ($CreateReportFile -eq 'CreatePerDatabase') {
-                            
-                            Clear-Variable -Name MessagesToReport -ErrorAction 'SilentlyContinue'
-                            
-                            Clear-Variable -Name EventsToReport -ErrorAction 'SilentlyContinue'
-                            
-                            Clear-Variable -Name Event10062DetailsToReport -ErrorAction 'SilentlyContinue'
-                            
-                        }
+                        Write-Output -InputObject $CorruptionFoundEvents
                         
                     }
+                    
                     
                 }
                 
