@@ -100,22 +100,32 @@ KEYWORDS: PowerShell, Exchange, New-MailboxRepairRequest
 - 0.5.1 - 2015-09-14 - Help updated, TO DO section updated, DEPENDENCIES section updated
 - 0.6.0 - 2015-09-14 - Log creation capabilities updates, parsing 10062 events added
 - 0.6.1 - 2015-09-15 - Logging per database corrected
+- 0.6.2 - 2015-10-20 - Named regions partially added, function Parse10062Events corrected based on PSScriptAnalyzer rules, function New-OutputFileNameFullPath updated to version 0.4.0, reports per server changed,                         function Get-EventsBySource updated to version 0.5.0
+- 0.6.3 - 2015-10-21 - Date for version 0.6.2 corrected
+- 0.7.0 - 2015-10-21 - Reports per database changed, function corrected based on PSScriptAnalyzer rules, TO DO updated
+- 0.7.1 - 2015-10-22 - Logging podsystem partially updated to use PSLogging module,  function New-OutputFileNameFullPath updated to version 0.4.0 - need to be tested
+- 0.8.0 - 2015-10-27 - Major updates especially logging fully updated to use PSLogging module
+- 0.8.1 - 2015-10-28 - Corrected, tested
+- 0.8.2 - 2015-10-28 - Script reformated
 	
 
 ### DEPENDENCIES
 -   Function Test-ExchangeCmdletsAvailability - minimum 0.1.2
 https://github.com/it-praktyk/Test-ExchangeCmdletsAvailability
--   Function Function Get-EventsBySource - minimum 0.3.2
+-   Function Function Get-EventsBySource - minimum 0.5.0
 https://github.com/it-praktyk/Get-EvenstBySource
--   Function New-OutputFileNameFullPath - minimum 0.3.0
+-   Function New-OutputFileNameFullPath - minimum 0.5.0
 https://github.com/it-praktyk/New-OutputFileNameFullPath
+-   Module PSLogging - minimum 3.1.0 - original author: Luca Sturlese, http://9to5it.com
+https://github.com/it-praktyk/PSLogging
 
 ### TO DO
-- improve display, store and/or mail summary report
 - Current time and timezone need to be compared between localhost and destination host to avoid mistakes
 - exit code return need to be implemented
 - add support for Exchange 2013 (?) and 2016 (?)
 - add named regions to easier navigation in code 
+- summary for detected corruption need to be implemented
+- summary per server e.g. checked databases need to be implemented
 
 ## LICENSE
 Copyright (C) 2015 Wojciech Sciesinski
