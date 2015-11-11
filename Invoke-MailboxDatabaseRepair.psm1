@@ -1,4 +1,4 @@
-﻿function Invoke-MailboxDatabasesRepairs {
+﻿function Invoke-MailboxDatabaseRepair {
 <#
     .SYNOPSIS
     Function intended for performing checks and repairs operation on Exchange Server 2010 SP1 (or newer) mailbox databases
@@ -81,10 +81,10 @@
     
     .EXAMPLE
     
-    [PS] >Invoke-MailboxDatabasesRepairs -ComputerName XXXXXXMBX03 -Database All -DisplaySummary:$true -ExpectedDurationTimeMinutes 120 -DetectOnly:$true
+    [PS] >Invoke-MailboxDatabaseRepair -ComputerName XXXXXXMBX03 -Database All -DisplaySummary:$true -ExpectedDurationTimeMinutes 120 -DetectOnly:$true
      
     .LINK
-    https://github.com/it-praktyk/Invoke-MailboxDatabasesRepairs
+    https://github.com/it-praktyk/Invoke-MailboxDatabaseRepair
     
     .LINK
     https://www.linkedin.com/in/sciesinskiwojciech
@@ -117,6 +117,7 @@
     0.8.0 - 2015-10-27 - Major updates especially logging fully updated to use PSLogging module
     0.8.1 - 2015-10-28 - Corrected, tested
 	0.8.2 - 2015-10-28 - Script reformated
+    0.9.0 - 2015-11-11 - Script switched to module, main function renamed to Invoke-MailboxDatabaseRepair
         
 
     DEPENDENCIES
@@ -310,7 +311,7 @@
         
         #endregion
         
-        [String]$MessageText = "Invoke-MailboxDatabasesRepairs.ps1 started - version {0} on the server {1}" -f $ScriptVersion.ToString(), $ComputerFQDNName #,  $StartTimeForServer, "Not implemented yet :-(" #, $PSBoundParameters.GetEnumerator()
+        [String]$MessageText = "Invoke-MailboxDatabaseRepair.ps1 started - version {0} on the server {1}" -f $ScriptVersion.ToString(), $ComputerFQDNName #,  $StartTimeForServer, "Not implemented yet :-(" #, $PSBoundParameters.GetEnumerator()
         
         $MessageText = Write-LogEntry -ToFile:$WriteToFile -LogPath $PerServerMessagesReportFile.FullName -MessageType INFO -Message $MessageText -TimeStamp -EntryDateTime $StartTimeForServer -ToScreen
         

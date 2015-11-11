@@ -1,4 +1,4 @@
-# Invoke-MailboxDatabasesRepairs
+# Invoke-MailboxDatabaseRepair
 
 ## SYNOPSIS
 The Function intended for performing checks and repairs operations on Exchange Server 2010 SP1 (or newer) mailbox databases
@@ -76,11 +76,11 @@ Break function execution if parameters provided for report file creation are not
 
 ## EXAMPLES
 
-[PS] >Invoke-MailboxDatabasesRepairs -ComputerName XXXXXXMBX03 -Database All -DisplaySummary:$true -ExpectedDurationTimeMinutes 120 -DetectOnly:$true
+[PS] >Invoke-MailboxDatabaseRepair -ComputerName XXXXXXMBX03 -Database All -DisplaySummary:$true -ExpectedDurationTimeMinutes 120 -DetectOnly:$true
  
 
 ## BASE REPOSITORY 
-https://github.com/it-praktyk/Invoke-MailboxDatabasesRepairs
+https://github.com/it-praktyk/Invoke-MailboxDatabaseRepair
 
 ## NOTES
 AUTHOR: Wojciech Sciesinski, wojciech[at]sciesinski[dot]net
@@ -107,6 +107,7 @@ KEYWORDS: PowerShell, Exchange, New-MailboxRepairRequest
 - 0.8.0 - 2015-10-27 - Major updates especially logging fully updated to use PSLogging module
 - 0.8.1 - 2015-10-28 - Corrected, tested
 - 0.8.2 - 2015-10-28 - Script reformated
+- 0.9.0 - 2015-11-11 - Script switched to module, main function renamed to Invoke-MailboxDatabaseRepair
 	
 
 ### DEPENDENCIES
