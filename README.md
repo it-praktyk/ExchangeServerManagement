@@ -108,7 +108,7 @@ KEYWORDS: PowerShell, Exchange, New-MailboxRepairRequest
 - 0.8.1 - 2015-10-28 - Corrected, tested
 - 0.8.2 - 2015-10-28 - Script reformated
 - 0.9.0 - 2015-11-11 - Script switched to module, main function renamed to Invoke-MailboxDatabaseRepair
-	
+- 0.9.1 - 2015-11-13 - Functions described in Dependencies moved to subfolder Nested, help moved to xml help file	
 
 ### DEPENDENCIES
 -   Function Test-ExchangeCmdletsAvailability - minimum 0.1.2
