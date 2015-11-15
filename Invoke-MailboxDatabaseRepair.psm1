@@ -1,7 +1,7 @@
 ﻿function Invoke-MailboxDatabaseRepair {
 
-	#For help check en-us\Invoke-MailboxDatabaseRepair.psm1-Help.xml
-	#Current version: 0.9.1 - 2015-11-13	
+    #For help check en-us\Invoke-MailboxDatabaseRepair.psm1-Help.xml
+    #Current version: 0.9.1 - 2015-11-15    
     
     [cmdletbinding()]
     
@@ -35,13 +35,13 @@
         [parameter(Mandatory = $false, ParameterSetName = "Reports")]
         [String]$ReportFileDirectoryPath = ".\reports\",
         [parameter(Mandatory = $false, ParameterSetName = "Reports")]
-        [String]$ReportFileNamePrefix,
+        [String]$ReportFileNamePrefix = $null,
         [parameter(Mandatory = $false, ParameterSetName = "Reports")]
-        [String]$ReportFileNameMidPart,
+        [String]$ReportFileNameMidPart = $null,
         [parameter(Mandatory = $false, ParameterSetName = "Reports")]
         [Bool]$IncludeDateTimePartInReportFileName = $true,
         [parameter(Mandatory = $false, ParameterSetName = "Reports")]
-        [DateTime]$DateTimePartInReportFileName,
+        [Nullable[DateTime]]$DateTimePartInReportFileName = $null,
         [parameter(Mandatory = $false, ParameterSetName = "Reports")]
         [String]$ReportFileNameExtension = ".txt",
         [parameter(Mandatory = $false, ParameterSetName = "Reports")]
@@ -90,7 +90,7 @@
             $ComputerNetBIOSName = $ComputerFQDNName.Split(".")[0]
             
         }
-        elseif ($ComputerName.Contains(".")) {
+        ElseIf ($ComputerName.Contains(".")) {
             
             $ComputerNetBIOSName = $ComputerName.Split(".")[0]
             
@@ -121,11 +121,11 @@
         
         #Creating name for the report, a report file will be used for save initial errors or all messages if CreatePerServer report will be selected
         
-        if ($CreateReportFile -eq 'CreatePerServer') {
+        If ($CreateReportFile -eq 'CreatePerServer') {
             
             [Bool]$WriteToFile = $true
             
-            if ($PSBoundParameters.ContainsKey('$ReportFileNamePrefix')) {
+            If ($PSBoundParameters.ContainsKey('$ReportFileNamePrefix')) {
                 
                 [String]$ReportPerServerNamePrefix = $ReportFileNamePrefix
                 
@@ -178,7 +178,9 @@
             
         }
         
-        #endregion
+        #endregion        
+        
+        #region Initial test for ComputerName parameter
         
         $MailboxServer = (Get-MailboxServer -Identity $ComputerNetBIOSName)
         
@@ -206,7 +208,7 @@
         #List of build version: https://technet.microsoft.com/library/hh135098.aspx
         Try {
             
-            if ($IsRunningOnLocalhost) {
+            If ($IsRunningOnLocalhost) {
                 
                 
                 $ExchangeSetupFileVersion = Select-Object -InputObject $(Get-Command -Name Exsetup.exe) -Property FileversionInfo
@@ -226,7 +228,7 @@
             
             Write-Verbose -Message $MessageText
             
-        }
+        } #Try
         Catch {
             
             
@@ -236,7 +238,7 @@
             
             Throw $MessageText
             
-        }
+        } #Catch
         
         Finally {
             
@@ -250,7 +252,11 @@
                 
             }
             
-        }
+        } #Finally
+        
+        #endregion        
+        
+        #region Initial tests for Database parameter
         
         If ($Database -eq 'All') {
             
@@ -301,7 +307,11 @@
         
     }
     
+    #endregion    
+    
     Process {
+        
+        #region Operations for Database
         
         $ActiveDatabases | ForEach-Object -Process {
             
@@ -312,7 +322,7 @@
                 
                 [Bool]$WriteToFile = $true
                 
-                if ($PSBoundParameters.ContainsKey('$ReportFileNamePrefix')) {
+                If ($PSBoundParameters.ContainsKey('$ReportFileNamePrefix')) {
                     
                     [String]$ReportPerDatabaseNamePrefix = $ReportFileNamePrefix
                     
@@ -392,8 +402,8 @@
             
             Try {
                 
-                
                 $RepairRequest = New-MailboxRepairRequest -Database $_.Name -CorruptionType "SearchFolder", "AggregateCounts", "ProvisionedFolder", "FolderView", "MessagePTagCn" -DetectOnly:$DetectOnly -ErrorAction Stop
+                
                 
             }
             Catch {
@@ -429,6 +439,38 @@
                 
             }
             
+            Finally {
+                
+                [String]$MessageText = "New-MailboxRepairRequest command executed for mailbox database {0} on the server {1} - {2}" -f $_.Name, $ComputerFQDNName, $RepairRequest
+                
+                
+                
+                switch ($CreateReportFile) {
+                    
+                    'CreatePerServer' {
+                        
+                        $MessageText = Write-LogEntry -ToFile:$true -LogPath $PerServerMessagesReportFile.FullName -MessageType INFO -Message $MessageText -TimeStamp -ToScreen
+                        
+                    }
+                    
+                    'CreatePerDatabase' {
+                        
+                        $MessageText = Write-LogEntry -ToFile:$true -LogPath $PerDatabaseMessagesReportFile.FullName -MessageType INFO -Message $MessageText -TimeStamp -ToScreen
+                        
+                    }
+                    
+                    'None' {
+                        
+                        $MessageText = Write-LogEntry -MessageType INFO -Message $MessageText -TimeStamp -ToScreen
+                        
+                    }
+                    
+                }
+                
+                Write-Verbose -Message $MessageText
+                
+            }
+            
             Start-Sleep -Seconds 1
             
             [Int]$ExpectedDurationStartWait = 5
@@ -445,7 +487,7 @@
                     
                     Write-Progress -Activity $MessageText -Status "Completion percentage is only confirmation that something is happening :-)" -PercentComplete (($i / ($ExpectedDurationStartWait * 60)) * 100)
                     
-                    if (($i += $CheckProgressEverySeconds) -ge ($ExpectedDurationStartWait * 60)) {
+                    If (($i += $CheckProgressEverySeconds) -ge ($ExpectedDurationStartWait * 60)) {
                         
                         $i = $CheckProgressEverySeconds
                         
@@ -472,9 +514,11 @@
                         $ErrorEvents = ($MonitoredEvents | Where-Object -FilterScript { $_.EventId -ne 10059 })
                         
                     }
-                    Catch { }
-                    
-                    $ErrorEventsFound = ((Measure-Object -InputObject $ErrorEvents).count -ge 1)
+                    Finally {
+                        
+                        $ErrorEventsFound = ((Measure-Object -InputObject $ErrorEvents).count -ge 1)
+                        
+                    }
                     
                     Try {
                         
@@ -482,13 +526,15 @@
                         $StartRepairEvent = ($MonitoredEvents | Where-Object -FilterScript { $_.EventId -eq 10059 })
                         
                     }
-                    Catch { }
-                    
-                    $StartRepairEventFound = ((Measure-Object -InputObject $StartRepairEvent).count -eq 1)
+                    Finally {
+                        
+                        $StartRepairEventFound = ((Measure-Object -InputObject $StartRepairEvent).count -eq 1)
+                        
+                    }
                     
                 }
                 
-                # Operations if errors found
+                # Operations if errors events found
                 If ($ErrorEventsFound) {
                     
                     [String]$MessageText = "Under checking database the {0} on {1}  error occured - event ID  {2} " -f $_.Name, $ComputerFQDNName, $ErrorEvents.EventId
@@ -555,7 +601,7 @@
                     
                 }
                 
-                elseif ($StartRepairEventFound) {
+                ElseIf ($StartRepairEventFound) {
                     
                     [DateTime]$StartTimeRepair = $StartRepairEvent.TimeGenerated
                     
@@ -630,9 +676,11 @@
                         $ErrorEvents = ($MonitoredEvents | Where-Object -FilterScript { $_.EventId -ne 10048 })
                         
                     }
-                    Catch { }
-                    
-                    $ErrorEventsFound = ((Measure-Object -InputObject $ErrorEvents).count -ge 1)
+                    Finally {
+                        
+                        $ErrorEventsFound = ((Measure-Object -InputObject $ErrorEvents).count -ge 1)
+                        
+                    }
                     
                     Try {
                         
@@ -640,10 +688,11 @@
                         $StopRepairEvent = ($MonitoredEvents | Where-Object -FilterScript { $_.EventId -eq 10048 })
                         
                     }
-                    Catch { }
-                    
-                    $StopRepairEventFound = ((Measure-Object -InputObject $StopRepairEvent).count -eq 1)
-                    
+                    Finally {
+                        
+                        $StopRepairEventFound = ((Measure-Object -InputObject $StopRepairEvent).count -eq 1)
+                        
+                    }
                 }
                 
                 If ($ErrorEventsFound) {
@@ -679,7 +728,7 @@
                     
                     $CorruptionFoundEventsCount = (Measure-Object -InputObject $CorruptionFoundEvents).count
                     
-                    if ($CorruptionFoundEventsCount -ge 1) {
+                    If ($CorruptionFoundEventsCount -ge 1) {
                         
                         $EventsToReport += $CorruptionFoundEvents
                         
@@ -731,7 +780,7 @@
                 }
                 
                 # Stop event found
-                elseif ($StopRepairEventFound) {
+                ElseIf ($StopRepairEventFound) {
                     
                     [String]$MessageText = "Repair request for the database {0} on the server {1} end successfully at {1}" -f $_.Name, $ComputerFQDNName, $StopRepairEvent.TimeGenerated
                     
@@ -762,11 +811,9 @@
                     #Check if any 10062 errors occured under check           
                     $CorruptionFoundEvents = Get-EventsBySource -ComputerName $ComputerFQDNName -LogName "Application" -ProviderName "MSExchangeIS Mailbox Store" -EventID 10062 -StartTime $StartTimeForDatabase -Verbose:$false
                     
-                    
-                    
                     $CorruptionFoundEventsCount = (Measure-Object -InputObject $CorruptionFoundEvents).count
                     
-                    if ($CorruptionFoundEventsCount -ge 1) {
+                    If ($CorruptionFoundEventsCount -ge 1) {
                         
                         $EventsToReport += $CorruptionFoundEvents
                         
@@ -801,7 +848,7 @@
                             
                             $EventsToReport | Export-Csv -Path $PerDatabaseEventsReportFile.FullName -Encoding UTF8 -NoTypeInformation -Delimiter ";"
                             
-                            if ($CorruptionFoundEventsCount -ge 1) {
+                            If ($CorruptionFoundEventsCount -ge 1) {
                                 
                                 $Events10062DetailsToReport | Export-Csv -Path $PerDatabaseCorruptionsDetailsReportFile.FullName -Encoding UTF8 -NoTypeInformation -Delimiter ";" -ErrorAction SilentlyContinue
                                 
@@ -850,7 +897,7 @@
                         
                         Write-Progress -Activity $MessageText -Status "Completion percentage is only confirmation that something is happening :-)" -PercentComplete (($i / ($ExpectedDurationTimeMinutes * 60)) * 100)
                         
-                        if (($i += $CheckProgressEverySeconds) -ge ($ExpectedDurationTimeMinutes * 60)) {
+                        If (($i += $CheckProgressEverySeconds) -ge ($ExpectedDurationTimeMinutes * 60)) {
                             
                             $i = $CheckProgressEverySeconds
                         }
@@ -869,10 +916,12 @@
                     
                 }
                 
-            }
+            } #Loop responsible to check if repair operation finished
             
             
         }
+        
+        #endregion
         
         
     }
@@ -896,7 +945,7 @@
             
             $EventsToReport | Export-Csv -Path $PerServerEventsReportFile.FullName -Encoding UTF8 -NoTypeInformation -Delimiter ";"
             
-            if ($CorruptionFoundEventsCount -ge 1) {
+            If ($CorruptionFoundEventsCount -ge 1) {
                 
                 $Events10062DetailsToReport | Export-Csv -Path $PerServersCorruptionDetailsReportFile.FullName -Encoding UTF8 -NoTypeInformation -Delimiter ";" -ErrorAction SilentlyContinue
                 

@@ -2,7 +2,7 @@
 
 ## SYNOPSIS
 The Function intended for performing checks and repairs operations on Exchange Server 2010 SP1 (or newer) mailbox databases
-   
+
 ## DESCRIPTION
 The function invokes New-MailboxDatabaseRepair cmdlet for all active mailbox database copies on server. Mailbox databases can be also provided by name in function parameter.
 
@@ -39,7 +39,7 @@ Database identifier - e.g. name - for which action need to be performed. If more
 Set to TRUE if any repair action shouldn't be started
 
 ### DisplayProgressBar
-If function is used in interactive mode progress bar can be displayed to provide overall information that something is happend. 
+If function is used in interactive mode progress bar can be displayed to provide overall information that something is happend.
 
 ### CheckProgressEverySeconds
 Set interval for progress checking, by default operation progress is checked every 120 seconds
@@ -77,15 +77,15 @@ Break function execution if parameters provided for report file creation are not
 ## EXAMPLES
 
 [PS] >Invoke-MailboxDatabaseRepair -ComputerName XXXXXXMBX03 -Database All -DisplaySummary:$true -ExpectedDurationTimeMinutes 120 -DetectOnly:$true
- 
 
-## BASE REPOSITORY 
+
+## BASE REPOSITORY
 https://github.com/it-praktyk/Invoke-MailboxDatabaseRepair
 
 ## NOTES
 AUTHOR: Wojciech Sciesinski, wojciech[at]sciesinski[dot]net
 KEYWORDS: PowerShell, Exchange, New-MailboxRepairRequest
-   
+
 ### VERSIONS HISTORY
 - 0.1.0 - 2015-07-05 - Initial release
 - 0.1.1 - 2015-07-06 - Help updated, TO DO updated
@@ -108,7 +108,8 @@ KEYWORDS: PowerShell, Exchange, New-MailboxRepairRequest
 - 0.8.1 - 2015-10-28 - Corrected, tested
 - 0.8.2 - 2015-10-28 - Script reformated
 - 0.9.0 - 2015-11-11 - Script switched to module, main function renamed to Invoke-MailboxDatabaseRepair
-- 0.9.1 - 2015-11-13 - Functions described in Dependencies moved to subfolder Nested, help moved to xml help file	
+- 0.9.1 - 2015-11-13 - Functions described in Dependencies moved to subfolder Nested, help moved to xml help file
+- 0.9.2 - 2015-11-15 - Function reformated, corrected based on PSScriptAnalyzer rules
 
 ### DEPENDENCIES
 -   Function Test-ExchangeCmdletsAvailability - minimum 0.1.2
@@ -124,7 +125,7 @@ https://github.com/it-praktyk/PSLogging
 - Current time and timezone need to be compared between localhost and destination host to avoid mistakes
 - exit code return need to be implemented
 - add support for Exchange 2013 (?) and 2016 (?)
-- add named regions to easier navigation in code 
+- add named regions to easier navigation in code
 - summary for detected corruption need to be implemented
 - summary per server e.g. checked databases need to be implemented
 
