@@ -1,22 +1,19 @@
 ﻿function Invoke-MailboxDatabaseRepair {
-
+    
     #For help check en-us\Invoke-MailboxDatabaseRepair.psm1-Help.xml
-    #Current version: 0.9.1 - 2015-11-15    
+    #Current version: 0.9.3 - 2015-11-16    
     
     [cmdletbinding()]
     
     #region parameters
-    
     param
     (
         [parameter(Mandatory = $false)]
         [alias("server", "cn")]
         [String]$ComputerName = 'localhost',
-        
-        #This parameter is not currently used - 
+        #This parameter is not currently used -
         #[parameter(Mandatory = $false)]
         #$CorruptionType = @("SearchFolder", "AggregateCounts", "ProvisionedFolder", "FolderView", "MessagePTagCn"),
-        
         [parameter(Mandatory = $false)]
         [String[]]$Database = 'All',
         [parameter(Mandatory = $false)]
@@ -25,8 +22,6 @@
         [Bool]$DisplayProgressBar = $false,
         [parameter(Mandatory = $false)]
         [Int]$CheckProgressEverySeconds = 120,
-        [parameter(Mandatory = $false)]
-        [Bool]$DisplaySummary = $false,
         [Parameter(mandatory = $false)]
         [int]$ExpectedDurationTimeMinutes = 150,
         [parameter(Mandatory = $false, ParameterSetName = "Reports")]
@@ -53,9 +48,11 @@
     
     Begin {
         
+        Write-Verbose -Message "The script is running from $PSScriptRoot"
+        
         #region Initialize variables
         
-        [Version]$ScriptVersion = "0.8.2"
+        [Version]$ScriptVersion = "0.9.3"
         
         $ActiveDatabases = @()
         
@@ -73,11 +70,27 @@
         
         [DateTime]$StartTimeForServer = $([DateTime]::Now)
         
+        [Int]$CorruptionFoundEventstPerServerCount = 0
+        
+        [Int]$DatabaseCount = 0
+        
+        [Int]$DatabaseFailCount = 0
+        
+        [Int]$DatabaseSuccessCount = 0
+        
+        [String]$RunMode = "DetectAndFix"
+        
         #endregion
         
         #region Load External modules and dependencies
         
-        
+        If ($PSVersionTable.psversion.major -lt 3) {
+            
+            $RequiredFiles = Get-ChildItem -Path "$PSScriptRoot\Nested\" -Filter "*.ps1"
+            
+            $RequiredFiles | Foreach-Object -Process { Import-Module $_.FullName -ErrorAction Stop -verbose:$false }
+            
+        }
         
         #endregion
         
@@ -158,9 +171,15 @@
             
         }
         
-        #endregion
+        #endregion                        
         
-        [String]$MessageText = "Invoke-MailboxDatabaseRepair.ps1 started - version {0} on the server {1}" -f $ScriptVersion.ToString(), $ComputerFQDNName #,  $StartTimeForServer, "Not implemented yet :-(" #, $PSBoundParameters.GetEnumerator()
+        if ($DetectOnly) {
+            
+            $RunMode = "DetectOnly"
+            
+        }
+        
+        [String]$MessageText = "Invoke-MailboxDatabaseRepair.ps1 started - version {0} on the server {1} in mode {2}" -f $ScriptVersion.ToString(), $ComputerFQDNName, $RunMode #,  $StartTimeForServer, "Not implemented yet :-(" #, $PSBoundParameters.GetEnumerator()
         
         $MessageText = Write-LogEntry -ToFile:$WriteToFile -LogPath $PerServerMessagesReportFile.FullName -MessageType INFO -Message $MessageText -TimeStamp -EntryDateTime $StartTimeForServer -ToScreen
         
@@ -295,6 +314,8 @@
         
         [Int]$ActiveDatabasesCount = (Measure-Object -InputObject $ActiveDatabases).Count
         
+        [Int]$DatabaseCount = $ActiveDatabasesCount
+        
         If ($ActiveDatabasesCount -lt 1) {
             
             [String]$MessageText = "Any database was not found on the server {0}" -f $ComputerNetBIOSName
@@ -315,6 +336,8 @@
         
         $ActiveDatabases | ForEach-Object -Process {
             
+            [String]$CurrentDatabaseName = $_.Name
+            
             #Current time need to be compared between localhost and destination host to avoid mistakes
             $StartTimeForDatabase = $([DateTime]::Now)
             
@@ -329,7 +352,7 @@
                 }
                 Else {
                     
-                    [String]$ReportPerDatabaseNamePrefix = "{0}_{1}_IntegrityChecks" -f $_.Name, $_.Server
+                    [String]$ReportPerDatabaseNamePrefix = "{0}_{1}_IntegrityChecks" -f $CurrentDatabaseName, $_.Server
                     
                 }
                 
@@ -358,7 +381,7 @@
             
             Try {
                 
-                $CurrentDatabase = (Get-MailboxDatabase -Identity $_.Name | Where-Object -FilterScript { $_.Server -match $ComputerNetBIOSName } | Select-Object -Property Name)
+                $CurrentDatabase = (Get-MailboxDatabase -Identity $CurrentDatabaseName | Where-Object -FilterScript { $_.Server -match $ComputerNetBIOSName } | Select-Object -Property Name)
                 
             }
             Catch {
@@ -368,6 +391,8 @@
                 $MessageText = Write-LogEntry -ToFile:$WriteToFile -LogPath $PerServerMessagesReportFile.FullName -MessageType WARNING -Message $MessageText -TimeStamp -ToScreen
                 
                 Write-Warning -Message $MessageText
+                
+                $DatabaseFailCount++
                 
                 #Exit from current loop iteration - check the next database
                 Continue
@@ -402,7 +427,7 @@
             
             Try {
                 
-                $RepairRequest = New-MailboxRepairRequest -Database $_.Name -CorruptionType "SearchFolder", "AggregateCounts", "ProvisionedFolder", "FolderView", "MessagePTagCn" -DetectOnly:$DetectOnly -ErrorAction Stop
+                $RepairRequest = New-MailboxRepairRequest -Database $CurrentDatabaseName -CorruptionType "SearchFolder", "AggregateCounts", "ProvisionedFolder", "FolderView", "MessagePTagCn" -DetectOnly:$DetectOnly -ErrorAction Stop
                 
                 
             }
@@ -430,10 +455,11 @@
                         
                     }
                     
-                    
                 }
                 
                 Write-Error -Message $MessageText
+                
+                $DatabaseFailCount++
                 
                 Continue
                 
@@ -441,9 +467,7 @@
             
             Finally {
                 
-                [String]$MessageText = "New-MailboxRepairRequest command executed for mailbox database {0} on the server {1} - {2}" -f $_.Name, $ComputerFQDNName, $RepairRequest
-                
-                
+                [String]$MessageText = "New-MailboxRepairRequest command executed for mailbox database {0} on the server {1} - Request ID: {2}" -f $CurrentDatabaseName, $ComputerFQDNName, $RepairRequest.RequestID
                 
                 switch ($CreateReportFile) {
                     
@@ -537,7 +561,7 @@
                 # Operations if errors events found
                 If ($ErrorEventsFound) {
                     
-                    [String]$MessageText = "Under checking database the {0} on {1}  error occured - event ID  {2} " -f $_.Name, $ComputerFQDNName, $ErrorEvents.EventId
+                    [String]$MessageText = "Under checking database the {0} on {1}  error occured - event ID  {2} " -f $CurrentDatabaseName, $ComputerFQDNName, $ErrorEvents.EventId
                     
                     
                     switch ($CreateReportFile) {
@@ -569,7 +593,7 @@
                     $DurationTimeForDatabase = New-TimeSpan -Start $StartTimeForDatabase -End $StopTimeForDatabase
                     
                     [String]$MessageText = "Operation for the database {0} server {1} end with error at {2}, operation duration time: {3} days, {4} hours, {5} minutes, {6} seconds" `
-                    -f $_.Name, $ComputerFQDNName, $StopTimeForDatabase, $DurationTimeForDatabase.Days, $DurationTimeForDatabase.Hours, $DurationTimeForDatabase.Minutes, $DurationTimeForDatabase.Seconds
+                    -f $CurrentDatabaseName, $ComputerFQDNName, $StopTimeForDatabase, $DurationTimeForDatabase.Days, $DurationTimeForDatabase.Hours, $DurationTimeForDatabase.Minutes, $DurationTimeForDatabase.Seconds
                     
                     switch ($CreateReportFile) {
                         
@@ -595,9 +619,10 @@
                     
                     Write-Verbose -Message $MessageText
                     
+                    $DatabaseFailCount++
+                    
                     #Exit from current loop iteration - check the next database
                     Continue
-                    
                     
                 }
                 
@@ -605,7 +630,7 @@
                     
                     [DateTime]$StartTimeRepair = $StartRepairEvent.TimeGenerated
                     
-                    [String]$MessageText = "Repair request for the database {0} on the server {1} started at {2}" -f $_.Name, $ComputerFQDNName, $StartTimeRepair
+                    [String]$MessageText = "Repair request for the database {0} on the server {1} started at {2}" -f $CurrentDatabaseName, $ComputerFQDNName, $StartTimeRepair
                     
                     switch ($CreateReportFile) {
                         
@@ -697,7 +722,7 @@
                 
                 If ($ErrorEventsFound) {
                     
-                    [String]$MessageText = "Under checking the database {0} on the server {1} error occured - event ID  {2} " -f $_.Name, $ComputerFQDNName, $ErrorEvents.EventId
+                    [String]$MessageText = "Under checking the database {0} on the server {1} error occured - event ID  {2} " -f $CurrentDatabaseName, $ComputerFQDNName, $ErrorEvents.EventId
                     
                     switch ($CreateReportFile) {
                         
@@ -723,16 +748,18 @@
                     
                     Write-Error -Message $MessageText
                     
-                    #Check if any 10062 errors occured before error                    
+                    #Check if any 10062 errors occured before termination error                    
                     $CorruptionFoundEvents = Get-EventsBySource -ComputerName $ComputerFQDNName -LogName "Application" -ProviderName "MSExchangeIS Mailbox Store" -EventID 10062 -StartTime $StartTimeForDatabase -Verbose:$false
                     
                     $CorruptionFoundEventsCount = (Measure-Object -InputObject $CorruptionFoundEvents).count
                     
                     If ($CorruptionFoundEventsCount -ge 1) {
                         
+                        $CorruptionFoundEventstPerServerCount += $CorruptionFoundEventsCount
+                        
                         $EventsToReport += $CorruptionFoundEvents
                         
-                        $Events10062Details = Parse10062Events -Events $CorruptionFoundEvents
+                        $Events10062Details = Parse10062Events -Events $CorruptionFoundEvents -ComputerName $ComputerFQDNName -DatabaseName $CurrentDatabaseName
                         
                         $Events10062Details | ForEach-Object -Process {
                             
@@ -747,7 +774,7 @@
                     $DurationTimeForDatabase = New-TimeSpan -Start $StartTimeForDatabase -End $StopTimeForDatabase
                     
                     [String]$MessageText = "Operation for the database {0} server {1} end with error2 at {2}, operation duration time: {3} days, {4} hours, {5} minutes, {6} seconds" `
-                    -f $_.Name, $ComputerFQDNName, $StopTimeForDatabase, $DurationTimeForDatabase.Days, $DurationTimeForDatabase.Hours, $DurationTimeForDatabase.Minutes, $DurationTimeForDatabase.Seconds
+                    -f $CurrentDatabaseName, $ComputerFQDNName, $StopTimeForDatabase, $DurationTimeForDatabase.Days, $DurationTimeForDatabase.Hours, $DurationTimeForDatabase.Minutes, $DurationTimeForDatabase.Seconds
                     
                     switch ($CreateReportFile) {
                         
@@ -773,8 +800,9 @@
                     
                     Write-Verbose -Message $MessageText
                     
-                    #Exit from current loop iteration - check the next database
+                    $DatabaseFailCount++
                     
+                    #Exit from current loop iteration - check the next database
                     Continue
                     
                 }
@@ -782,7 +810,7 @@
                 # Stop event found
                 ElseIf ($StopRepairEventFound) {
                     
-                    [String]$MessageText = "Repair request for the database {0} on the server {1} end successfully at {1}" -f $_.Name, $ComputerFQDNName, $StopRepairEvent.TimeGenerated
+                    [String]$MessageText = "Repair request for the database {0} on the server {1} end successfully at {1}" -f $CurrentDatabaseName, $ComputerFQDNName, $StopRepairEvent.TimeGenerated
                     
                     switch ($CreateReportFile) {
                         
@@ -815,9 +843,11 @@
                     
                     If ($CorruptionFoundEventsCount -ge 1) {
                         
+                        $CorruptionFoundEventstPerServerCount += $CorruptionFoundEventsCount
+                        
                         $EventsToReport += $CorruptionFoundEvents
                         
-                        $Events10062Details = Parse10062Events -Events $CorruptionFoundEvents
+                        $Events10062Details = Parse10062Events -Events $CorruptionFoundEvents -ComputerName $ComputerFQDNName -DatabaseName $CurrentDatabaseName
                         
                         $Events10062Details | ForEach-Object -Process {
                             
@@ -831,8 +861,9 @@
                     
                     $DurationTimeForDatabase = New-TimeSpan -Start $StartTimeForDatabase -End $StopTimeForDatabase
                     
-                    [String]$MessageText = "Operation for the database {0} server {1} end at {2}, operation duration time: {3} days, {4} hours, {5} minutes, {6} seconds" `
-                    -f $_.Name, $ComputerFQDNName, $StopTimeForDatabase, $DurationTimeForDatabase.Days, $DurationTimeForDatabase.Hours, $DurationTimeForDatabase.Minutes, $DurationTimeForDatabase.Seconds
+                    [String]$MessageText = "Operation for the database {0} server {1} end at {2}, operation duration time: {3} days, {4} hours, {5} minutes, {6} seconds; corrupted mailboxes found: {7}" `
+                    -f $CurrentDatabaseName, $ComputerFQDNName, $StopTimeForDatabase, $DurationTimeForDatabase.Days, $DurationTimeForDatabase.Hours, $DurationTimeForDatabase.Minutes, `
+                    $DurationTimeForDatabase.Seconds, $CorruptionFoundEventsCount
                     
                     switch ($CreateReportFile) {
                         
@@ -877,15 +908,7 @@
                     
                     Write-Verbose -Message $MessageText
                     
-                    <#
-                    
-                    If ($DisplaySummary) {
-                        
-                        Write-Output -InputObject $CorruptionFoundEvents
-                        
-                    }
-                    
-                    #>
+                    $DatabaseSuccessCount++
                     
                 }
                 
@@ -893,7 +916,7 @@
                     
                     If ($DisplayProgressBar) {
                         
-                        [String]$MessageText = "The database {0} repair on the server {1} request  is in progress." -f $_.Name, $ComputerFQDNName
+                        [String]$MessageText = "The database {0} repair on the server {1} request  is in progress." -f $CurrentDatabaseName, $ComputerFQDNName
                         
                         Write-Progress -Activity $MessageText -Status "Completion percentage is only confirmation that something is happening :-)" -PercentComplete (($i / ($ExpectedDurationTimeMinutes * 60)) * 100)
                         
@@ -928,16 +951,7 @@
     
     End {
         
-        $StopTimeForServer = Get-Date
         
-        $DurationTimeForServer = New-TimeSpan -Start $StartTimeForServer -End $StopTimeForServer
-        
-        [String]$MessageText = "Operation for the server {0} ended at {1}, operation duration time: {2} days, {3} hours, {4} minutes, {5} seconds" `
-        -f $ComputerFQDNName, $StopTimeForServer, $DurationTimeForServer.Days, $DurationTimeForServer.Hours, $DurationTimeForServer.Minutes, $DurationTimeForServer.Seconds
-        
-        $MessageText = Write-LogEntry -ToFile:$WriteToFile -LogPath $PerServerMessagesReportFile.FullName -MessageType INFO -Message $MessageText -TimeStamp -ToScreen
-        
-        Write-Verbose -Message $MessageText
         
         #region Write reports per server
         
@@ -945,7 +959,7 @@
             
             $EventsToReport | Export-Csv -Path $PerServerEventsReportFile.FullName -Encoding UTF8 -NoTypeInformation -Delimiter ";"
             
-            If ($CorruptionFoundEventsCount -ge 1) {
+            If ($CorruptionFoundEventstPerServerCount -ge 1) {
                 
                 $Events10062DetailsToReport | Export-Csv -Path $PerServersCorruptionDetailsReportFile.FullName -Encoding UTF8 -NoTypeInformation -Delimiter ";" -ErrorAction SilentlyContinue
                 
@@ -957,10 +971,22 @@
             }
             
             
-            
         }
         
-        #endregion
+        #endregion                
+        
+        $StopTimeForServer = Get-Date
+        
+        $DurationTimeForServer = New-TimeSpan -Start $StartTimeForServer -End $StopTimeForServer
+        
+        [String]$MessageText = "Operation for the server {0} ended at {1}, operation duration time: {2} days, {3} hours, {4} minutes, {5} seconds; databaseses checks success: {6} `
+                                , databases checks failed: {7}; corrupted mailboxes found: {8} " `
+        -f $ComputerFQDNName, $StopTimeForServer, $DurationTimeForServer.Days, $DurationTimeForServer.Hours, $DurationTimeForServer.Minutes, `
+        $DurationTimeForServer.Seconds, $DatabaseSuccessCount, $DatabaseFailCount, $CorruptionFoundEventstPerServerCount
+        
+        $MessageText = Write-LogEntry -ToFile:$WriteToFile -LogPath $PerServerMessagesReportFile.FullName -MessageType INFO -Message $MessageText -TimeStamp -ToScreen
+        
+        Write-Verbose -Message $MessageText
         
     }
     
@@ -968,112 +994,128 @@
 
 Function Parse10062Events {
     
+    [cmdletbinding()]
     param (
         
         [parameter(mandatory = $true)]
-        $Events
+        $Events,
+        [parameter(mandatory = $true)]
+        [String]$ComputerName,
+        [parameter(mandatory = $true)]
+        [String]$DatabaseName
         
     )
     
-    
-    $CorruptionFoundEvents = $Events
-    
-    $Results = @()
-    
-    $option = [System.StringSplitOptions]::RemoveEmptyEntries
-    
-    $CorruptionFoundEvents | ForEach-Object -Process {
+    BEGIN {
         
-        If ($_.EventID -eq 10062) {
+        $CorruptionFoundEvents = $Events
+        
+        $Results = @()
+        
+        $option = [System.StringSplitOptions]::RemoveEmptyEntries
+        
+    }
+    
+    PROCESS {
+        
+        $CorruptionFoundEvents | ForEach-Object -Process {
             
-            $separator = '^'
-            
-            $MessageLines = ($_.Message).Split($separator, $option)
-            
-            Write-Verbose -Message "Lines to parse ($MessageLines | Measure).count"
-            
-            [Int]$i = 1
-            
-            $MessageLines | ForEach-Object -Process {
+            If ($_.EventID -eq 10062) {
                 
-                [String]$Line = $_
+                $separator = '^'
                 
-                $Result = New-Object -TypeName PSObject
+                $MessageLines = ($_.Message).Split($separator, $option)
                 
-                If ($i -eq 2) {
+                Write-Verbose -Message "Lines to parse ($MessageLines | Measure).count"
+                
+                [Int]$i = 1
+                
+                $MessageLines | ForEach-Object -Process {
                     
-                    $ColonPosition = $Line.IndexOf(":")
+                    [String]$Line = $_
                     
-                    $SpacePosition = $Line.IndexOf(" ")
+                    $Result = New-Object -TypeName PSObject
                     
-                    $LineLength = $Line.Length
-                    
-                    $MailboxGuid = $Line.Substring($ColonPosition + 1, $SpacePosition - $ColonPosition - 1)
-                    
-                    $MailboxDisplayName = ($Line.Substring($SpacePosition + 2, $LineLength - $SpacePosition - 3)).Trim()
-                    
-                }
-                ElseIf ($i -gt 4) {
-                    
-                    $Result | Add-Member -type NoteProperty -name MailboxGuid -value $MailboxGuid
-                    
-                    $Result | Add-Member -type NoteProperty -name MailboxDisplayName -value $MailboxDisplayName
-                    
-                    $option = [System.StringSplitOptions]::RemoveEmptyEntries
-                    
-                    [String]$separator = ','
-                    
-                    $Fields = ($Line).Split($separator, $option)
-                    
-                    $f = 1
-                    
-                    $Fields | ForEach-Object -Process {
+                    If ($i -eq 2) {
                         
-                        $Field = $_
+                        $ColonPosition = $Line.IndexOf(":")
                         
-                        Switch ($f) {
+                        $SpacePosition = $Line.IndexOf(" ")
+                        
+                        $LineLength = $Line.Length
+                        
+                        $MailboxGuid = $Line.Substring($ColonPosition + 1, $SpacePosition - $ColonPosition - 1)
+                        
+                        $MailboxDisplayName = ($Line.Substring($SpacePosition + 2, $LineLength - $SpacePosition - 3)).Trim()
+                        
+                    }
+                    ElseIf ($i -gt 4) {
+                        
+                        $Result | Add-Member -type NoteProperty -name ComputerName -value $ComputerName
+                        
+                        $Result | Add-Member -type NoteProperty -name DatabaseName -value $DatabaseName
+                        
+                        $Result | Add-Member -type NoteProperty -name MailboxGuid -value $MailboxGuid
+                        
+                        $Result | Add-Member -type NoteProperty -name MailboxDisplayName -value $MailboxDisplayName
+                        
+                        $option = [System.StringSplitOptions]::RemoveEmptyEntries
+                        
+                        [String]$separator = ','
+                        
+                        $Fields = ($Line).Split($separator, $option)
+                        
+                        $f = 1
+                        
+                        $Fields | ForEach-Object -Process {
                             
-                            1 {
+                            $Field = $_
+                            
+                            Switch ($f) {
                                 
-                                $Result | Add-Member -type NoteProperty -name CorruptionType -value $Field.trim()
+                                1 {
+                                    
+                                    $Result | Add-Member -type NoteProperty -name CorruptionType -value $Field.trim()
+                                    
+                                }
+                                
+                                2 {
+                                    
+                                    $Result | Add-Member -type NoteProperty -name IsFixed -value $Field.trim()
+                                    
+                                }
+                                
+                                3 {
+                                    
+                                    $Result | Add-Member -type NoteProperty -name FID -value $Field.trim()
+                                    
+                                }
+                                
+                                4 {
+                                    
+                                    $Result | Add-Member -type NoteProperty -name Property -value $Field.trim()
+                                    
+                                }
+                                
+                                5 {
+                                    
+                                    $Result | Add-Member -type NoteProperty -name Resolutions -value $Field.trim()
+                                    
+                                }
                                 
                             }
                             
-                            2 {
-                                
-                                $Result | Add-Member -type NoteProperty -name IsFixed -value $Field.trim()
-                                
-                            }
-                            
-                            3 {
-                                
-                                $Result | Add-Member -type NoteProperty -name FID -value $Field.trim()
-                                
-                            }
-                            
-                            4 {
-                                
-                                $Result | Add-Member -type NoteProperty -name Property -value $Field.trim()
-                                
-                            }
-                            
-                            5 {
-                                
-                                $Result | Add-Member -type NoteProperty -name Resolutions -value $Field.trim()
-                                
-                            }
+                            $f++
                             
                         }
                         
-                        $f++
+                        $Results += $Result
                         
                     }
                     
-                    $Results += $Result
+                    $i++
                     
                 }
-                
-                $i++
                 
             }
             
@@ -1081,6 +1123,26 @@ Function Parse10062Events {
         
     }
     
-    Return $Results
+    END {
+        
+        Return $Results
+        
+    }
     
 }
+
+<#
+function Parse10062EventsSummaries {
+    
+    [cmdletbinding()]
+    param (
+        
+        [parameter(mandatory = $true)]
+        $Events10062Details
+        
+    )
+    
+    #$10062FixedCount = (Measure-Object -InputObject ( $Events10062Details | Where-Object -in
+    
+}
+#>
