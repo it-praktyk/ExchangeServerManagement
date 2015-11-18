@@ -386,6 +386,7 @@ updated to version 0.4.0 - need to be tested
 0.9.1 - 2015-11-13 - Functions described in Dependencies moved to subfolder Nested, help moved to xml help file
 0.9.2 - 2015-11-15 - Function reformated, corrected based on PSScriptAnalyzer rules
 0.9.3 - 2015-11-16 - Compatibility with PowerShell 2.0 corrected, reporting for details of events corrected, DisplaySummary parameter deleted
+0.9.4 - 2015-11-18 - Names of code regions added, logging improved
 </maml:para>
 				<maml:para>
 DEPENDENCIES

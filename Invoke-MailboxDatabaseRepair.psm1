@@ -1,7 +1,7 @@
 ﻿function Invoke-MailboxDatabaseRepair {
     
     #For help check en-us\Invoke-MailboxDatabaseRepair.psm1-Help.xml
-    #Current version: 0.9.3 - 2015-11-16    
+    #Current version: 0.9.4 - 2015-11-18    
     
     [cmdletbinding()]
     
@@ -80,6 +80,12 @@
         
         [String]$RunMode = "DetectAndFix"
         
+        if ($DetectOnly) {
+            
+            $RunMode = "DetectOnly"
+            
+        }
+        
         #endregion
         
         #region Load External modules and dependencies
@@ -130,7 +136,7 @@
         
         #endregion
         
-        #region Initialize reports files names and files
+        #region Initialize reports files names for reports in PerServer mode
         
         #Creating name for the report, a report file will be used for save initial errors or all messages if CreatePerServer report will be selected
         
@@ -173,11 +179,7 @@
         
         #endregion                        
         
-        if ($DetectOnly) {
-            
-            $RunMode = "DetectOnly"
-            
-        }
+
         
         [String]$MessageText = "Invoke-MailboxDatabaseRepair.ps1 started - version {0} on the server {1} in mode {2}" -f $ScriptVersion.ToString(), $ComputerFQDNName, $RunMode #,  $StartTimeForServer, "Not implemented yet :-(" #, $PSBoundParameters.GetEnumerator()
         
@@ -293,7 +295,7 @@
                 }
                 Catch {
                     
-                    [String]$MessageText = "Database {0} is not currently active on {1} and can't be checked" -f $CurrentDatabase.Name, $ComputerFQDNName
+                    [String]$MessageText = "Database {0} is not currently active on {1} and can't be checked -1 " -f $CurrentDatabase, $ComputerFQDNName
                     
                     $MessageText = Write-LogEntry -ToFile:$WriteToFile -LogPath $PerServerMessagesReportFile.FullName -MessageType WARNING -Message $MessageText -TimeStamp -ToScreen
                     
@@ -328,18 +330,19 @@
         
     }
     
-    #endregion    
+    #endregion
     
     Process {
         
-        #region Operations for Database
-        
+        #region Operations for all databases
         $ActiveDatabases | ForEach-Object -Process {
             
             [String]$CurrentDatabaseName = $_.Name
             
             #Current time need to be compared between localhost and destination host to avoid mistakes
             $StartTimeForDatabase = $([DateTime]::Now)
+            
+            #region Initialize reports files names for reports in PerDatabase mode
             
             If ($CreateReportFile -eq 'CreatePerDatabase') {
                 
@@ -376,17 +379,22 @@
                 
             }
             
+            #endregion
             
-            #Check current status of database - if is still mounted on correct server - if not exit from current loop iteration
+            #region Check current status of database - if is still mounted on correct server - if not then exit from current loop iteration
             
             Try {
                 
-                $CurrentDatabase = (Get-MailboxDatabase -Identity $CurrentDatabaseName | Where-Object -FilterScript { $_.Server -match $ComputerNetBIOSName } | Select-Object -Property Name)
+                $CurrentDatabaseStatus = (Get-MailboxDatabase -Identity $CurrentDatabaseName | Get-MailboxDatabaseCopyStatus | where { $_.MailboxServer -eq $ComputerNetBIOSName })
                 
             }
-            Catch {
+            Finally {
                 
-                [String]$MessageText = "Database {0} is not currently active on {1} and can't be checked" -f $CurrentDatabase, $ComputerFQDNName
+                [String]$MessageText = "Database {0} is not currently active on {1} and can't be checked - 2" -f $CurrentDatabaseName, $ComputerFQDNName
+                
+            }
+            
+            If ($CurrentDatabaseStatus.ActiveDatabaseCopy -ne $ComputerNetBIOSName) {
                 
                 $MessageText = Write-LogEntry -ToFile:$WriteToFile -LogPath $PerServerMessagesReportFile.FullName -MessageType WARNING -Message $MessageText -TimeStamp -ToScreen
                 
@@ -394,10 +402,14 @@
                 
                 $DatabaseFailCount++
                 
-                #Exit from current loop iteration - check the next database
+                #Exit from current loop iteration - check the next database                    
                 Continue
                 
             }
+            
+            #endregion            
+            
+            #region Invoking repair command
             
             [String]$MessageText = "Invoking command for repair database {0} on mailbox server {1}" -f $CurrentDatabase.Name, $ComputerFQDNName
             
@@ -465,41 +477,15 @@
                 
             }
             
-            Finally {
-                
-                [String]$MessageText = "New-MailboxRepairRequest command executed for mailbox database {0} on the server {1} - Request ID: {2}" -f $CurrentDatabaseName, $ComputerFQDNName, $RepairRequest.RequestID
-                
-                switch ($CreateReportFile) {
-                    
-                    'CreatePerServer' {
-                        
-                        $MessageText = Write-LogEntry -ToFile:$true -LogPath $PerServerMessagesReportFile.FullName -MessageType INFO -Message $MessageText -TimeStamp -ToScreen
-                        
-                    }
-                    
-                    'CreatePerDatabase' {
-                        
-                        $MessageText = Write-LogEntry -ToFile:$true -LogPath $PerDatabaseMessagesReportFile.FullName -MessageType INFO -Message $MessageText -TimeStamp -ToScreen
-                        
-                    }
-                    
-                    'None' {
-                        
-                        $MessageText = Write-LogEntry -MessageType INFO -Message $MessageText -TimeStamp -ToScreen
-                        
-                    }
-                    
-                }
-                
-                Write-Verbose -Message $MessageText
-                
-            }
+            #endregion
             
             Start-Sleep -Seconds 1
             
             [Int]$ExpectedDurationStartWait = 5
             
             [int]$i = 1
+            
+            #region Checking if repair operation started
             
             [Bool]$MonitoredEventsFound = $false
             
@@ -630,7 +616,7 @@
                     
                     [DateTime]$StartTimeRepair = $StartRepairEvent.TimeGenerated
                     
-                    [String]$MessageText = "Repair request for the database {0} on the server {1} started at {2}" -f $CurrentDatabaseName, $ComputerFQDNName, $StartTimeRepair
+                    [String]$MessageText = "Repair request for the database {0} on the server {1} started at {2} with RequestID: {3}" -f $CurrentDatabaseName, $ComputerFQDNName, $StartTimeRepair, $RepairRequest.RequestID
                     
                     switch ($CreateReportFile) {
                         
@@ -668,6 +654,7 @@
                 
             }
             
+            #endregion
             
             Start-Sleep -Seconds 1
             
@@ -679,7 +666,7 @@
             
             $StopRepairEventFound = $false
             
-            #Loop responsible to check if repair operation finished
+            #region Loop responsible to check if repair operation finished
             while ($MonitoredEventsFound -eq $false) {
                 
                 $MonitoredEvents = Get-EventsBySource -ComputerName $ComputerFQDNName -LogName "Application" -ProviderName "MSExchangeIS Mailbox Store" -EventID 10045, 10048, 10049, 10050, 10051 -StartTime $StartTimeForDatabase -Verbose:$false
@@ -939,7 +926,9 @@
                     
                 }
                 
-            } #Loop responsible to check if repair operation finished
+            }
+            
+            #endregion Loop responsible to check if repair operation finished
             
             
         }
@@ -970,7 +959,6 @@
                 
             }
             
-            
         }
         
         #endregion                
@@ -979,8 +967,7 @@
         
         $DurationTimeForServer = New-TimeSpan -Start $StartTimeForServer -End $StopTimeForServer
         
-        [String]$MessageText = "Operation for the server {0} ended at {1}, operation duration time: {2} days, {3} hours, {4} minutes, {5} seconds; databaseses checks success: {6} `
-                                , databases checks failed: {7}; corrupted mailboxes found: {8} " `
+        [String]$MessageText = "Operation for the server {0} ended at {1}, operation duration time: {2} days, {3} hours, {4} minutes, {5} seconds; databaseses checks success: {6}, databases checks failed: {7}; corrupted mailboxes found: {8} " `
         -f $ComputerFQDNName, $StopTimeForServer, $DurationTimeForServer.Days, $DurationTimeForServer.Hours, $DurationTimeForServer.Minutes, `
         $DurationTimeForServer.Seconds, $DatabaseSuccessCount, $DatabaseFailCount, $CorruptionFoundEventstPerServerCount
         
@@ -991,6 +978,7 @@
     }
     
 }
+
 
 Function Parse10062Events {
     
