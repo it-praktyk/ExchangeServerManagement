@@ -1,7 +1,12 @@
 ﻿function Invoke-MailboxDatabaseRepair {
     
-    #For help check en-us\Invoke-MailboxDatabaseRepair.psm1-Help.xml
-    #Current version: 0.9.4 - 2015-11-18    
+    <#
+    For help check en-us\Invoke-MailboxDatabaseRepair.psm1-Help.xml    
+    Current version: 0.9.4 - 2015-11-18          
+    
+    Please remember about changing version number also in other files like:
+    psd1, a xml help file, a README file and in variable $Version
+    #>
     
     [cmdletbinding()]
     
@@ -52,7 +57,7 @@
         
         #region Initialize variables
         
-        [Version]$ScriptVersion = "0.9.3"
+        [Version]$ScriptVersion = "0.9.4"
         
         $ActiveDatabases = @()
         

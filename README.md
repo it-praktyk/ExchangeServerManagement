@@ -44,9 +44,6 @@ If function is used in interactive mode progress bar can be displayed to provide
 ### CheckProgressEverySeconds
 Set interval for progress checking, by default operation progress is checked every 120 seconds
 
-### DisplaySummary
-Set to TRUE if summary should be displayed - summary will contain data about performed operations
-
 ### ExpectedDurationTimeMinutes
 Time in minutes used for displaing progress bar
 
@@ -110,6 +107,8 @@ KEYWORDS: PowerShell, Exchange, New-MailboxRepairRequest
 - 0.9.0 - 2015-11-11 - Script switched to module, main function renamed to Invoke-MailboxDatabaseRepair
 - 0.9.1 - 2015-11-13 - Functions described in Dependencies moved to subfolder Nested, help moved to xml help file
 - 0.9.2 - 2015-11-15 - Function reformated, corrected based on PSScriptAnalyzer rules
+- 0.9.3 - 2015-11-16 - Compatibility with PowerShell 2.0 corrected, reporting for details of events corrected, DisplaySummary parameter deleted
+- 0.9.4 - 2015-11-18 - Names of code regions added, logging improved
 
 ### DEPENDENCIES
 -   Function Test-ExchangeCmdletsAvailability - minimum 0.1.2
@@ -125,9 +124,8 @@ https://github.com/it-praktyk/PSLogging
 - Current time and timezone need to be compared between localhost and destination host to avoid mistakes
 - exit code return need to be implemented
 - add support for Exchange 2013 (?) and 2016 (?)
-- add named regions to easier navigation in code
 - summary for detected corruption need to be implemented
-- summary per server e.g. checked databases need to be implemented
+
 
 ## LICENSE
 Copyright (C) 2015 Wojciech Sciesinski
