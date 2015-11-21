@@ -2,7 +2,7 @@
     
     <#
     For help check en-us\Invoke-MailboxDatabaseRepair.psm1-Help.xml    
-    Current version: 0.9.4 - 2015-11-18          
+    Current version: 0.9.5 - 2015-11-20          
     
     Please remember about changing version number also in other files like:
     psd1, a xml help file, a README file and in variable $Version
@@ -57,7 +57,7 @@
         
         #region Initialize variables
         
-        [Version]$ScriptVersion = "0.9.4"
+        [Version]$ScriptVersion = "0.9.5"
         
         $ActiveDatabases = @()
         
@@ -109,21 +109,21 @@
         
         If ($ComputerName -eq 'localhost') {
             
-            $ComputerFQDNName = ([Net.DNS]::GetHostEntry("localhost")).HostName
+            [String]$ComputerFQDNName = (([Net.DNS]::GetHostEntry("localhost")).HostName).ToUpper()
             
-            $ComputerNetBIOSName = $ComputerFQDNName.Split(".")[0]
+            [String]$ComputerNetBIOSName = ($ComputerFQDNName.Split(".")[0]).ToUpper()
             
         }
         ElseIf ($ComputerName.Contains(".")) {
             
-            $ComputerNetBIOSName = $ComputerName.Split(".")[0]
+            [String]$ComputerNetBIOSName = ($ComputerName.Split(".")[0]).ToUpper()
             
         }
         else {
             
-            $ComputerNetBIOSName = $ComputerName
+            [String]$ComputerNetBIOSName = ($ComputerName).ToUpper()
             
-            $ComputerFQDNName = ([Net.DNS]::GetHostEntry($ComputerName)).HostName
+            [String]$ComputerFQDNName = (([Net.DNS]::GetHostEntry($ComputerName)).HostName).ToUpper()
             
         }
         
@@ -145,7 +145,7 @@
         
         #Creating name for the report, a report file will be used for save initial errors or all messages if CreatePerServer report will be selected
         
-        If ($CreateReportFile -eq 'CreatePerServer') {
+        If ($CreateReportFile -ne 'None') {
             
             [Bool]$WriteToFile = $true
             
@@ -347,9 +347,11 @@
             #Current time need to be compared between localhost and destination host to avoid mistakes
             $StartTimeForDatabase = $([DateTime]::Now)
             
-            #region Initialize reports files names for reports in PerDatabase mode
+            #region Initialize reports files names for reports in PerDatabase mode            
             
             If ($CreateReportFile -eq 'CreatePerDatabase') {
+                
+                $EventsToReport = @()
                 
                 [Bool]$WriteToFile = $true
                 
@@ -360,7 +362,7 @@
                 }
                 Else {
                     
-                    [String]$ReportPerDatabaseNamePrefix = "{0}_{1}_IntegrityChecks" -f $CurrentDatabaseName, $_.Server
+                    [String]$ReportPerDatabaseNamePrefix = "{0}_{1}_IntegrityChecks" -f $CurrentDatabaseName, $ComputerNetBIOSName
                     
                 }
                 
@@ -370,7 +372,7 @@
                                                                               -DateTimePartInOutputFileName $StartTimeForDatabase `
                                                                               -OutputFileNameSuffix 'messages' -BreakIfError $BreakOnReportCreationError).OutputFilePath
                 
-                Start-Log -LogPath $PerDatabaseEventsReportFile.DirectoryName -LogName $PerDatabaseEventsReportFile.Name -ScriptVersion $ScriptVersion.ToString()
+                Start-Log -LogPath $PerDatabaseMessagesReportFile.DirectoryName -LogName $PerDatabaseMessagesReportFile.Name -ScriptVersion $ScriptVersion.ToString() | Out-Null
                 
                 $PerDatabaseEventsReportFile = $(New-OutputFileNameFullPath -OutputFileDirectoryPath $ReportFileDirectoryPath -OutputFileNamePrefix $ReportPerDatabaseNamePrefix `
                                                                             -IncludeDateTimePartInOutputFileName $IncludeDateTimePartInReportFileName `
@@ -498,7 +500,7 @@
                 
                 If ($DisplayProgressBar) {
                     
-                    [String]$MessageText = "Waiting for start repair operation on the database {0}." -f $CurrentDatabase.Name
+                    [String]$MessageText = "Waiting for start check operation in {0} operation on the database {1} on the server {2}" -f $RunMode, $CurrentDatabaseName, $ComputerFQDNName
                     
                     Write-Progress -Activity $MessageText -Status "Completion percentage is only confirmation that something is happening :-)" -PercentComplete (($i / ($ExpectedDurationStartWait * 60)) * 100)
                     
@@ -882,11 +884,11 @@
                                 
                             }
                             
-                            Clear-Variable -Name MessagesToReport -ErrorAction 'SilentlyContinue'
+                            Clear-Variable -Name MessagesToReport -ErrorAction SilentlyContinue
                             
-                            Clear-Variable -Name EventsToReport -ErrorAction 'SilentlyContinue'
+                            Clear-Variable -Name $EventsToReport -ErrorAction SilentlyContinue
                             
-                            Clear-Variable -Name Event10062DetailsToReport -ErrorAction 'SilentlyContinue'
+                            Clear-Variable -Name Event10062DetailsToReport -ErrorAction SilentlyContinue
                             
                         }
                         
@@ -908,7 +910,7 @@
                     
                     If ($DisplayProgressBar) {
                         
-                        [String]$MessageText = "The database {0} repair on the server {1} request  is in progress." -f $CurrentDatabaseName, $ComputerFQDNName
+                        [String]$MessageText = "The database {0} check in mode {1} on the server {2} request  is in progress." -f $CurrentDatabaseName, $RunMode, $ComputerFQDNName
                         
                         Write-Progress -Activity $MessageText -Status "Completion percentage is only confirmation that something is happening :-)" -PercentComplete (($i / ($ExpectedDurationTimeMinutes * 60)) * 100)
                         

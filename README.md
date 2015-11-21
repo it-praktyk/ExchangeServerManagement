@@ -109,6 +109,7 @@ KEYWORDS: PowerShell, Exchange, New-MailboxRepairRequest
 - 0.9.2 - 2015-11-15 - Function reformated, corrected based on PSScriptAnalyzer rules
 - 0.9.3 - 2015-11-16 - Compatibility with PowerShell 2.0 corrected, reporting for details of events corrected, DisplaySummary parameter deleted
 - 0.9.4 - 2015-11-18 - Names of code regions added, logging improved
+- 0.9.5 - 2015-11-20 - Minor updates
 
 ### DEPENDENCIES
 -   Function Test-ExchangeCmdletsAvailability - minimum 0.1.2
