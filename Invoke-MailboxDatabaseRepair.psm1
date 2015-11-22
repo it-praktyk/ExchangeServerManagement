@@ -2,7 +2,7 @@
     
     <#
     For help check en-us\Invoke-MailboxDatabaseRepair.psm1-Help.xml    
-    Current version: 0.9.5 - 2015-11-20          
+    Current version: 0.9.6 - 2015-11-22          
     
     Please remember about changing version number also in other files like:
     psd1, a xml help file, a README file and in variable $Version
@@ -42,8 +42,6 @@
         [Bool]$IncludeDateTimePartInReportFileName = $true,
         [parameter(Mandatory = $false, ParameterSetName = "Reports")]
         [Nullable[DateTime]]$DateTimePartInReportFileName = $null,
-        [parameter(Mandatory = $false, ParameterSetName = "Reports")]
-        [String]$ReportFileNameExtension = ".txt",
         [parameter(Mandatory = $false, ParameterSetName = "Reports")]
         [Bool]$BreakOnReportCreationError = $true
         
