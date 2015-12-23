@@ -1,5 +1,6 @@
-Function Test-EmailAddress {
-<#
+﻿function Test-EmailAddress {
+    
+    <#
 	.SYNOPSIS
 		Function is intended to verify the correctness of addresses email in Microsoft Exchange Enviroment
 		
@@ -9,21 +10,24 @@ Function Test-EmailAddress {
 		a) if email address contain wrong characters e.g. % or spaces
 		b) if email address is from domain which are on accepted domains list
 		c) if email address is currently assigned to any object in Exchange environment (a conflicted object exist)
-		As the result returned is PowerShell object which contain: EmailAddress, ExitCode, ExitDescription, ConflictedObjectAlias, ConflictedObjectType.
-		
-		Exit codes and descriptions:
-		0 - No Error
-		1 - Email doesn't contain 'at' char
-		2 - Email exist now
-		3 - Unsupported chars found
-		4 - Not accepted domain
-		5 - White chars e.g. spaces founded before/after email
-		
+	
 	.PARAMETER EmailAddress
 		Email address which need to be verified in Exchange environment
+    
+    .PARAMETER TestEmailFormat
+    
+    .PARAMETER TestAcceptedDomains
+    
+    .PARAMETER TestIfExists
+    
+    .PARAMETER TestIsPrimary
+    
 
 	.EXAMPLE
-		Test-EmailAddress -EmailAddress dummy@example.com
+		Test-EmailAddress -EmailAddress dummy@example.com 
+    
+    .EXAMPLE
+        Test-EmailAddress -EmailAddress "dummy@example.com","john@doe.com"
 	
 	.LINK
 		https://github.com/it-praktyk/Test-EmailAddress
@@ -47,184 +51,224 @@ Function Test-EmailAddress {
 		0.4.0 - 2015-03-07 - verifying if function is runned in EMS added
 		0.5.0 - 2015-03-08 - verifying if email contains white chars (like a spaces) at the beginning or at the end added
 		0.5.1 - 2015-03-09 - compatibility issue on Exchange 2010 (PowerShell 2.0) resolved
-		
+        0.6.0 - 2015-12-22 - the function rewriten, information about license added
+    
+        TODO
+        - implement test "TestIsPrimary"
+        - update help
+        - descriptive test result add
 
-		TODO
-		- add parameters to disable some checks
-		- add support for verifying emails from files directly 
-	
-
-		DISCLAIMER
-		This script is provided AS IS without warranty of any kind. I disclaim all implied warranties including, without limitation,
-		any implied warranties of merchantability or of fitness for a particular purpose. The entire risk arising out of the use or
-		performance of the sample scripts and documentation remains with you. In no event shall I be liable for any damages whatsoever
-		(including, without limitation, damages for loss of business profits, business interruption, loss of business information,
-		or other pecuniary loss) arising out of the use of or inability to use the script or documentation. 
-#>
-
-[cmdletbinding()]
-
-param (
-
-	[parameter(mandatory=$true)]
-	[ValidateNotNullOrEmpty()]
-	[alias("email")]
-	[String]$EmailAddress
-
-)
-
-BEGIN {
-
-	#Declare variable for store results data
-		
-	$Result = New-Object PSObject
-
-}
-
-PROCESS {
-
-	$AtPosition=$EmailAddress.IndexOf("@")
-
-	
-	If ( $AtPosition -eq -1 ) {
-	
-		Write-Verbose "Email address $EmailAddress is not correct - at char is missed."
-		
-		$Result | Add-Member -type NoteProperty -Name EmailAddress -value $EmailAddress
-		$Result | Add-Member -type NoteProperty -Name ExitCode  -value 1
-		$Result | Add-Member -type NoteProperty -Name ExitDescription -value "Email doesn't contain 'at' char"
-		$Result | Add-Member -Type NoteProperty -Name ConflictedObjectAlias -value "Not checked"
-		$Result | Add-Member -Type NoteProperty -Name ConflictedObjectType -value "Not checked"
-				
-		Return $Result
-	}
-	Else { 
-	
-		#This try/catch block check if Exchange commands are available
-		Try {
-		
-			$AcceptedDomains = Get-AcceptedDomain 
-			
-		}
-		
-		Catch [System.Management.Automation.CommandNotFoundException] {
-		
-			Throw "This function need to be run using Exchange Management Shell."
-		
-		}
-	
-		Write-Verbose "Provided email address is $EmailAddress."
-		
-		If ( ($EmailAddress.Trim()).Length -ne $EmailAddress.Length ) {
-		
-			Write-Verbose -Message "Email address $EmailAddress contains white spaces at the beginning or at the end."
-				
-			$Result | Add-Member -type NoteProperty -Name EmailAddress -value $EmailAddress
-			$Result | Add-Member -type NoteProperty -Name ExitCode  -value 5
-			$Result | Add-Member -type NoteProperty -Name ExitDescription -value "White chars e.g. spaces founded before/after email"
-			$Result | Add-Member -Type NoteProperty -Name ConflictedObjectAlias -value "Not checked"
-			$Result | Add-Member -Type NoteProperty -Name ConflictedObjectType -value  "Not checked"
-				
-			Return $Result
-		
-		}
-			
-		$EmailAddressLenght = $EmailAddress.Length
-
-		$Domain = $EmailAddress.Substring($AtPosition+1, $EmailAddressLenght - ( $AtPosition +1 ))
-		
-		Write-Verbose "Email address is from domain $Domain"	
-		
-		If ( ($AcceptedDomains | where { $_.domainname -eq $Domain } | measure).count -eq 1) {
-		
-			Write-verbose -Message "Domain from $EmailAddress found in accepted domains."
-			
-			$SpacePosition=$EmailAddress.IndexOf(" ")
-			
-			#Regex source http://www.regular-expressions.info/email.html
-			$EmailRegex = '[a-z0-9!#$%&''*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&''*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?'
-			
-			If ( ([regex]::Match($EmailAddress, $EmailRegex, "IgnoreCase ")).Success -and $SpacePosition -eq -1 ) {
-			
-				$NotError = $true
-			
-				Write-Verbose -Message "Email address  $EmailAddress  doesn't contain any unsupported chars"
-				
-				
-				Try {
-					
-					$Recipient = Get-Recipient $EmailAddress -ErrorAction Stop
-					
-				}
-								
-				Catch  {
-					
-					Write-Verbose -Message "Email address doesn't exist in environment - finally result: is correct"
-					
-					$NotError = $false
-					
-					$Result | Add-Member -type NoteProperty -Name EmailAddress -value $EmailAddress
-					$Result | Add-Member -type NoteProperty -Name ExitCode  -value 0
-					$Result | Add-Member -type NoteProperty -Name ExitDescription -value "No Error"
-					$Result | Add-Member -Type NoteProperty -Name ConflictedObjectAlias -value "No conflict"
-					$Result | Add-Member -Type NoteProperty -Name ConflictedObjectType -value "Not checked"
-					
-					Return $Result
-				
-				}
-	
-				If ( $NotError ) {
-					
-					Write-Verbose -Message "Recipient with email address $EmailAddress exist now."
-						
-					$Result | Add-Member -type NoteProperty -Name EmailAddress -value $EmailAddress
-					$Result | Add-Member -type NoteProperty -Name ExitCode  -value 2
-					$Result | Add-Member -type NoteProperty -Name ExitDescription -value "Email exist now"
-					$Result | Add-Member -Type NoteProperty -Name ConflictedObjectAlias -value $Recipient.alias
-					$Result | Add-Member -Type NoteProperty -Name ConflictedObjectType -value $Recipient.RecipientType
-				
-					Return $Result
-						
-				}
-	
-			}
-			Else {
-		
-				Write-Verbose -Message "Email address $EmailAddress contain unsupported chars"
-				
-				$Result | Add-Member -type NoteProperty -Name EmailAddress -value $EmailAddress
-				$Result | Add-Member -type NoteProperty -Name ExitCode  -value 3
-				$Result | Add-Member -type NoteProperty -Name ExitDescription -value "Unsupported chars found"
-				$Result | Add-Member -Type NoteProperty -Name ConflictedObjectAlias -value "Not checked"
-				$Result | Add-Member -Type NoteProperty -Name ConflictedObjectType -value  "Not checked"
-				
-				Return $Result
-		
-			}
-		}
-	
-		Else {
-		
-			Write-Verbose "Email address $EmailAddress is not from accepted domains."
-			
-			$Result | Add-Member -type NoteProperty -Name EmailAddress -value $EmailAddress
-			$Result | Add-Member -type NoteProperty -Name ExitCode  -value 4
-			$Result | Add-Member -type NoteProperty -Name ExitDescription -value "Not accepted domain"
-			$Result | Add-Member -Type NoteProperty -Name ConflictedObjectAlias -value "Not checked"
-			$Result | Add-Member -Type NoteProperty -Name ConflictedObjectType -value  "Not checked"
-					
-			Return $Result
-
-		}
-
-	}
-	
-}
-
-END {
-	
-	#Nothing yet in this section
-
-}
-
+        LICENSE
+	    Copyright (C) 2015 Wojciech Sciesinski
+	    This program is free software: you can redistribute it and/or modify
+	    it under the terms of the GNU General Public License as published by
+    	the Free Software Foundation, either version 3 of the License, or
+	    (at your option) any later version.
+	    This program is distributed in the hope that it will be useful,
+	    but WITHOUT ANY WARRANTY; without even the implied warranty of
+	    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+	    GNU General Public License for more details.
+	    You should have received a copy of the GNU General Public License
+	    along with this program. If not, see <http://www.gnu.org/licenses/>
+    
+        .OUTPUTS
+        
+#>    
+    
+    [cmdletbinding()]
+    #[OutputType(System.Object[])]
+    param (
+        
+        [parameter(ValueFromPipeline, ValueFromPipelineByPropertyName, mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [alias("email")]
+        [String[]]$EmailAddress,
+        [parameter(Mandatory = $false)]
+        [Bool]$TestEmailFormat = $true,
+        [parameter(Mandatory = $false)]
+        [Bool]$TestAcceptedDomains = $true,
+        [parameter(Mandatory = $false)]
+        [Bool]$TestIfExists = $true,
+        [parameter(Mandatory = $false)]
+        [Bool]$TestIsPrimary = $true
+        
+    )
+    
+    BEGIN {
+        
+        #region Declare variables                                                        
+        
+        $Results = @()
+        
+        if ($TestAcceptedDomains) {
+            
+            #This try/catch block check if Exchange commands are available
+            Try {
+                
+                $AcceptedDomains = Get-AcceptedDomain
+                
+            }
+            
+            Catch [System.Management.Automation.CommandNotFoundException] {
+                
+                $TestAcceptedDomains = $false
+                
+                $TestAcceptedDomainsResult = "SKIPPED"
+                
+            }
+            
+        }
+        
+        #endregion        
+        
+    } #END BEGIN
+    
+    PROCESS {
+        
+        
+        #region Main loop
+        $EmailAddress | ForEach-Object -Process {
+            
+            $CurrentEmailAddress = $_
+            
+            $Result = New-Object PSObject
+            
+            #region Checking email pattern                                                                        
+            
+            if ($TestEmailFormat) {
+                
+                
+                #Check if white chars are on the begining/end
+                if ($CurrentEmailAddress.Trim() -ne $CurrentEmailAddress) {
+                    
+                    $TestWhiteCharsResult = "FAIL"
+                    
+                    $CurrentEmailAddress = $CurrentEmailAddress.Trim()
+                    
+                }
+                
+                #Check if space is in midle of email
+                $SpacePosition = $CurrentEmailAddress.IndexOf(" ")
+                
+                #Regex source http://www.regular-expressions.info/email.html
+                $EmailRegex = '[a-z0-9!#$%&''*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&''*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?'
+                
+                
+                If (([regex]::Match($CurrentEmailAddress, $EmailRegex, "IgnoreCase ")).Success -and $SpacePosition -eq -1) {
+                    
+                    $TestEmailFormatResult = "PASS"
+                    
+                }
+                Else {
+                    
+                    $TestEmailFormatResult = "FAIL"
+                    
+                }
+                
+                
+            }
+            
+            #endregion            
+            
+            #region Splitting current email address                                    
+            
+            If ($TestEmailFormatResult = "PASS") {
+                
+                $AtPosition = $CurrentEmailAddress.IndexOf("@")
+                
+                $CurrentEmailAddressLenght = $CurrentEmailAddress.Length
+                
+                $CurrentEmailDomain = $CurrentEmailAddress.Substring($AtPosition + 1, $CurrentEmailAddressLenght - ($AtPosition + 1))
+                
+                $TestAcceptedDomainsCurrent = $false
+                
+                $TestIfExistsCurrent = $false
+                
+            }
+            Else {
+                
+                $TestAcceptedDomainsCurrent = $false
+                
+                $TestIfExistsCurrent = $false
+                
+            }
+            
+            If ($TestAcceptedDomains -and $TestAcceptedDomainsCurrent) {
+                
+                If (($AcceptedDomains | Where-Object -FilterScript { $_.domainname -eq $CurrentEmailDomain } | Measure-Object).count -eq 1) {
+                    
+                    $TestAcceptedDomainsResult = "PASS"
+                    
+                }
+                Else {
+                    
+                    $TestAcceptedDomainsResult = "FAIL"
+                    
+                }
+                
+            }
+            Else {
+                
+                $TestAcceptedDomainsResult = "SKIPPED"
+                
+            }
+            
+            if ($TestIfExists -and $TestIfExistsCurrent) {
+                
+                $TestIfExistResult = "EXISTS"
+                
+                Try {
+                    
+                    $Recipient = Get-Recipient $EmailAddress -ErrorAction Stop
+                    
+                }
+                Catch {
+                    
+                    $TestIfExistResult = "NON EXIST"
+                    
+                    $ExistingObjectAlias = "NON EXIST"
+                    
+                    $ExistingObjectType = "NON EXIST"
+                    
+                }
+                
+                If ($TestIfExistResult -eq "EXISTS") {
+                    
+                    $ExistingObjectAlias = $Recipient.alias
+                    
+                    $ExistingObjectType = $Recipient.RecipientType
+                    
+                }
+                
+                
+            }
+            Else {
+                
+                $TestIfExistResult = "SKIPPED"
+                
+            }
+            
+            #endregion                                                
+            
+            $Result | Add-Member -type NoteProperty -Name EmailAddress -value $CurrentEmailAddress
+            $Result | Add-Member -type NoteProperty -Name TestWhiteChars -Value $TestWhiteCharsResult
+            $Result | Add-Member -type NoteProperty -Name TestEmailFormat -Value $TestEmailFormatResult
+            $Result | Add-Member -Type NoteProperty -Name TestAcceptedDomain -Value $TestAcceptedDomainsResult
+            $Result | Add-Member -Type NoteProperty -Name TestEmailExists -Value $TestEmailFormatResult
+            $Result | Add-Member -Type NoteProperty -Name ExistingObjectAlias -value $ExistingObjectAlias
+            $Result | Add-Member -Type NoteProperty -Name ExistingObjectType -value $Recipient.RecipientType
+            
+            
+            $Results += Result
+            
+        } #endregion Main loop
+        
+    } #END PROCESS
+    
+    END {
+        
+        Return $Results
+        
+    } #END END :-)
+    
 }
