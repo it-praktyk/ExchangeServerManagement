@@ -1,0 +1,10 @@
+SELECT QUANTIZE(TO_TIMESTAMP(date, time), 3600) AS Hour, 
+cs-username, 
+	sc-status,
+	cs-uri-stem,
+	Count(*) AS Total
+From '[LOGFILEPATH]'
+/*Where cs-uri-stem like '%Autodiscover%' */
+Where cs-uri-stem like '%Microsoft-Server-ActiveSync%' 
+	Group By Hour,cs-username, sc-status, cs-uri-stem
+	order by Hour, cs-username
