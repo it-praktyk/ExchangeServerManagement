@@ -11,11 +11,11 @@ Test-EmailAddress [-EmailAddress] <String[]> [[-TestEmailFormat] <Boolean>] [[-T
 Function which can be used to verifing email addresses in Microsoft Exchange Server environment.
 
 Checks perfomed:
-a) if an email address provided as parameter value contains wrong characters e.g. spaces at the begining/end
-b) if an email address format is complaint with requirements - check Wikipedia https://en.wikipedia.org/wiki/Email_address
-c) if an email address is from a domain which are added to the accepted domains list of is in the list passed as parameter value
-d) if an email address is currently assigned to any object in Exchange environment (a conflicted object exist)
-e) if an email address is currently set as PrimarySMTPAddress for existing object
+- a) if an email address provided as parameter value contains wrong characters e.g. spaces at the begining/end
+- b) if an email address format is complaint with requirements - check Wikipedia https://en.wikipedia.org/wiki/Email_address
+- c) if an email address is from a domain which are added to the accepted domains list of is in the list passed as parameter value
+- d) if an email address is currently assigned to any object in Exchange environment (a conflicted object exist)
+- e) if an email address is currently set as PrimarySMTPAddress for existing object
 
 ## PARAMETERS
 ### -EmailAddress &lt;String[]&gt;
@@ -84,9 +84,9 @@ AUTHOR: Wojciech Sciesinski, wojciech[at]sciesinski[dot]net
 KEYWORDS: Windows, PowerShell, Exchange Server, email
 
 VERSION HISTORY
-0.6.0 - 2015-12-22 - the function rewriten, information about license added
-0.7.0 - 2015-12-29 - validation extended and corrected
-0.8.0 - 2015-12-31 - the function tested, the parameter $AcceptedDomains implemented, help updated
+- 0.6.0 - 2015-12-22 - the function rewriten, information about license added
+- 0.7.0 - 2015-12-29 - validation extended and corrected
+- 0.8.0 - 2015-12-31 - the function tested, the parameter $AcceptedDomains implemented, help updated
 
 TODO
 - add a description of errors for the test TestEmailFormat results (?)
@@ -94,17 +94,11 @@ TODO
 - add an additional parameter AllowedCharsExclusionList
 
 LICENSE
-Copyright (C) 2015 Wojciech Sciesinski
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details.
-You should have received a copy of the GNU General Public License
-along with this program. If not, see <http://www.gnu.org/licenses/>
+Copyright (C) 2016 Wojciech Sciesinski
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+You should have received a copy of the GNU General Public License along with this program. If not, see <http://www.gnu.org/licenses/>
 
 ## EXAMPLES
 ### EXAMPLE 1
