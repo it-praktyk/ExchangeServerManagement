@@ -1,6 +1,4 @@
 ﻿function Set-SIPAddressLikePrimarySMTPAddress {
-	
-
 <#
     .SYNOPSIS
     Function intended for verifying and setting SIP addresses equal to PrimarySMTPAddress for all mailboxes in Exchange Server environment
@@ -30,10 +28,12 @@
    
     VERSIONS HISTORY
     0.1.0 - 2015-06-09 - First version published on GitHub, based mostly on Remove-DoubledSIPAddresses v. 0.1.4
-	0.1.1 - 2015-06-10 - Verbose logging corrected, WhatIf implemented
+    0.1.1 - 2015-06-10 - Verbose logging corrected, WhatIf implemented
+	0.2.0 - 2016-01-14 - The functin reformated, updated due to output from PSScriptAnalyzer 1.2.0
     
     TODO
     - check if Exchange cmdlets are available
+	- resolve output from PSScriptAnalyzer 'Set-SIPAddressLikePrimarySMTPAddress' has the Should Process attribute but does not call ShouldProcess/ShouldContinue.
             
     LICENSE
     Copyright (C) 2015 Wojciech Sciesinski
@@ -79,9 +79,9 @@
         
         Write-Verbose -Message $MessageText
         
-        $Mailboxes = Get-Mailbox -ResultSize Unlimited | Select -Property Alias, DisplayName, RecipientType, EmailAddresses, Guid, PrimarySMTPAddress
+        $Mailboxes = Get-Mailbox -ResultSize Unlimited | Select-Object -Property Alias, DisplayName, RecipientType, EmailAddresses, Guid, PrimarySMTPAddress
         
-        $MailboxesCount = ($Mailboxes | measure).Count
+        $MailboxesCount = ($Mailboxes | Measure-Object).Count
         
         $i = 1
         
@@ -89,7 +89,7 @@
     
     PROCESS {
         
-        $Mailboxes | ForEach  {
+        $Mailboxes | ForEach-Object -Process  {
             
             If ($DisplayProgressBar) {
                 
@@ -107,7 +107,7 @@
             
             Write-Verbose -Message $MessageText
             
-            $CurrentMailboxSIPAddresses = ($CurrentMailbox | select -ExpandProperty EmailAddresses | where { $_.prefix -match 'SIP' })
+            $CurrentMailboxSIPAddresses = ($CurrentMailbox | Select-Object -ExpandProperty EmailAddresses | Where-Object -FilterScript { $_.prefix -match 'SIP' })
             
             $CurrentMailboxSIPAddressesCount = ($CurrentMailboxSIPAddresses | Measure-Object).Count
             
@@ -123,22 +123,24 @@
                 $Result = New-Object PSObject
                 
                 $Result | Add-Member -type 'NoteProperty' -name MailboxAlias -value $CurrentMailbox.Alias
-				
-				$Result | Add-Member -type 'NoteProperty' -name MailboxDisplayName -value $CurrentMailbox.DisplayName
-				
-				$Result | Add-Member -type 'NoteProperty' -Name MailboxSMTPPrimaryAddress -Value $CurrentMailbox.PrimarySMTPAddress
+
+                
+                $Result | Add-Member -type 'NoteProperty' -name MailboxDisplayName -value $CurrentMailbox.DisplayName
+
+                
+                $Result | Add-Member -type 'NoteProperty' -Name MailboxSMTPPrimaryAddress -Value $CurrentMailbox.PrimarySMTPAddress
                 
                 $Result | Add-Member -Type 'NoteProperty' -Name MailboxGuid -Value $CurrentMailbox.Guid
                 
                 $Result | Add-Member -Type 'NoteProperty' -Name SIPAddressesBeforeCount -Value $CurrentMailboxSIPAddressesCount
                 
-                [String]$CurrentSIPAddressesList = [string]::Join(",", $($CurrentMailboxSIPAddresses | ForEach { $_.ProxyAddressString }))
+                [String]$CurrentSIPAddressesList = [string]::Join(",", $($CurrentMailboxSIPAddresses | ForEach-Object -Process { $_.ProxyAddressString }))
                 
                 $Result | Add-Member -Type 'NoteProperty' -Name SIPAddressesBeforeList -Value $CurrentSIPAddressesList
                 
                 $s = $CurrentMailboxSIPAddressesCount
                 
-                $CurrentMailboxSIPAddresses | foreach {
+                $CurrentMailboxSIPAddresses | ForEach-Object -Process {
                     
                     $CurrentSIPObject = $_
                     
@@ -189,23 +191,26 @@
                         [String]$SIPToAdd = "SIP:{0}" -f $CurrentMailbox.PrimarySMTPAddress
                         
                         set-mailbox -Identity $CurrentMailbox.Alias -EmailAddresses @{ add = $SIPToAdd } -ErrorAction Continue
-						
 
-						[String]$MessageText = "SIP address {0} was set on mailbox {1}" -f $SIPToAdd, $CurrentMailbox.Alias
-						
-						Write-Verbose -Message $MessageText
+                        
+
+                        [String]$MessageText = "SIP address {0} was set on mailbox {1}" -f $SIPToAdd, $CurrentMailbox.Alias
+
+
+                        
+                        Write-Verbose -Message $MessageText
                         
                     }
   
                 }
                 
-                $CurrentMailboxSIPAddressesAfter = (Get-Mailbox -Identity $CurrentMailbox.Alias | select -ExpandProperty EmailAddresses | where { $_.prefix -match 'SIP' })
+                $CurrentMailboxSIPAddressesAfter = (Get-Mailbox -Identity $CurrentMailbox.Alias | Select-Object -ExpandProperty EmailAddresses | Where-Object -FilterScript { $_.prefix -match 'SIP' })
                 
                 $CurrentMailboxSIPAddressesCountAfter = ($CurrentMailboxSIPAddressesAfter | Measure-Object).Count
                 
                 If ($CurrentMailboxSIPAddressesCountAfter -gt 1) {
                     
-                    [String]$CurrentSIPAddressesListAfter = [string]::Join(",", $($CurrentMailboxSIPAddressesAfter | ForEach {
+                    [String]$CurrentSIPAddressesListAfter = [string]::Join(",", $($CurrentMailboxSIPAddressesAfter | ForEach-Object -Process {
                         
                         $_.ProxyAddressString
                     }))
@@ -254,7 +259,7 @@
             
             Try {
                 
-                If (($Resulst | measure).Count -lt 1) {
+                If (($Resulst | Measure-Object).Count -ge 1) {
                     
                     
                     $Results | Export-CSV -Path $FullLogFilePath -NoTypeInformation -Delimiter ";" -Encoding UTF8 -ErrorAction SilentlyContinue
