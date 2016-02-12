@@ -40,15 +40,16 @@ Dynamic?                     false
 System.Object
 
 ## NOTES
-AUTHOR: Wojciech Sciesinski, wojciech[at]sciesinski[dot]net
+AUTHOR: Wojciech Sciesinski, wojciech[at]sciesinski[dot]net  
 KEYWORDS: PowerShell, Exchange, SIPAddresses, ProxyAddresses, Lync, migration
 
 VERSIONS HISTORY
 - 0.1.0 - 2016-02-12 - First version published on GitHub
+- 0.1.1 - 2016-02-12 - Help updated
 
-LICENSE
-Copyright (c) 2016 Wojciech Sciesinski
-This function is licensed under The MIT License (MIT)
+LICENSE  
+Copyright (c) 2016 Wojciech Sciesinski  
+This function is licensed under The MIT License (MIT)  
 Full license text: https://opensource.org/licenses/MIT
 
 ## EXAMPLES

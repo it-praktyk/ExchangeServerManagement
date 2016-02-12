@@ -40,7 +40,7 @@
 
     MailboxAlias              : AA473815
     MailboxDisplayName        : Wolters-van der Thomes, IAV (Ingrid)
-    PrimarySMTPAddress        : ingrid.wolters-van.der.thomes@example.nl
+    PrimarySMTPAddress        : ingrid.wolters-van.der.thomes@example.com
     MailboxGuid               : b201434a-1f62-4ee4-a446-e0b2bc7badc9
     SIPAddressesCount         : 2
     SIPAddressesList          : SIP:Ingrid.van.der.thomes-Wolters@example.com,sip:ingrid.wolters-van.der.thomes@example.com
@@ -54,7 +54,7 @@
 
     MailboxAlias              : AA473815
     MailboxDisplayName        : Wolters-van der Thomes, IAV (Ingrid)
-    PrimarySMTPAddress        : ingrid.wolters-van.der.thomes@example.nl
+    PrimarySMTPAddress        : ingrid.wolters-van.der.thomes@example.com
     MailboxGuid               : b201434a-1f62-4ee4-a446-e0b2bc7badc9
     SIPAddressesCount         : 2
     SIPAddressesList          : SIP:Ingrid.van.der.thomes-Wolters@example.com,sip:ingrid.wolters-van.der.thomes@example.com
@@ -66,6 +66,7 @@
    
     VERSIONS HISTORY
     - 0.1.0 - 2016-02-12 - First version published on GitHub
+	- 0.1.1 - 2016-02-12 - Help updated
             
     LICENSE
     Copyright (c) 2016 Wojciech Sciesinski
