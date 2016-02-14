@@ -43,8 +43,8 @@
     PrimarySMTPAddress        : ingrid.wolters-van.der.thomes@example.com
     MailboxGuid               : b201434a-1f62-4ee4-a446-e0b2bc7badc9
     SIPAddressesCount         : 2
-    SIPAddressesList          : SIP:Ingrid.van.der.thomes-Wolters@example.com,sip:ingrid.wolters-van.der.thomes@example.com
-    SIPAddresses              : {SIP:Ingrid.van.der.thomes-Wolters@example.com, sip:ingrid.wolters-van.der.thomes@example.com}
+    SIPAddressesList          : SIP:Ingrid.Wolters@example.com,sip:ingrid.thomes@example.com
+    SIPAddresses              : {SIP:Ingrid.Wolters@example.com, sip:ingrid.thomes@example.com}
     
     .EXAMPLE
     
@@ -57,8 +57,8 @@
     PrimarySMTPAddress        : ingrid.wolters-van.der.thomes@example.com
     MailboxGuid               : b201434a-1f62-4ee4-a446-e0b2bc7badc9
     SIPAddressesCount         : 2
-    SIPAddressesList          : SIP:Ingrid.van.der.thomes-Wolters@example.com,sip:ingrid.wolters-van.der.thomes@example.com
-    SIPAddresses              : {SIP:Ingrid.van.der.thomes-Wolters@example.com, sip:ingrid.wolters-van.der.thomes@example.com}
+    SIPAddressesList          : SIP:Ingrid.Wolters@example.com,sip:ingrid.thomes@example.com
+    SIPAddresses              : {SIP:Ingrid.Wolters@example.com, sip:ingrid.thomes@example.com}
           
     .NOTES
     AUTHOR: Wojciech Sciesinski, wojciech[at]sciesinski[dot]net
@@ -67,6 +67,7 @@
     VERSIONS HISTORY
     - 0.1.0 - 2016-02-12 - First version published on GitHub
 	- 0.1.1 - 2016-02-12 - Help updated
+	- 0.1.2 - 2016-02-14 - Example updated
             
     LICENSE
     Copyright (c) 2016 Wojciech Sciesinski
