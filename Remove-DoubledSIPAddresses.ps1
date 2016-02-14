@@ -5,7 +5,7 @@
     
     .DESCRIPTION 
     Function intended for verifying and removing doubled SIP addresses from all mailboxes in Exchange Server environment. `
-    Only address in a domain provided in a parameter CorrectSIPDomain will be keep.
+    Only address in a domain provided in a parameter CorrectSIPDomain will be kept.
     
     .PARAMETER Identity 
     The Identity parameter specifies the identity of the mailbox. You can use one of the following values:
@@ -19,7 +19,7 @@
     * Alias
     
     .PARAMETER CorrectSIPDomain
-    Name of domain for which correct SIPs belong. If the parameter is not set domain from PrimarySMTPAddress will be used.
+    The name of domain for what correct SIPs belong. If the parameter is not set the domain name from PrimarySMTPAddress will be used.
     
     .INPUT
     To see the input types that this cmdlet accepts, see Cmdlet Input and Output Types (http://go.microsoft.com/fwlink/p/?linkId=313798). If the Input Type field for a cmdlet is blank, the cmdlet doesn't accept input data.
@@ -81,6 +81,7 @@
     0.1.3 - 2015-05-31 - Help updated, a script reformatted
     0.1.4 - 2015-06-09 - Primary SMTP address added to report file
     0.2.0 - 2016-02-10 - Report cappabilities removed from the function, input from pipeline added, the licence changed to MIT
+	0.2.1 - 2016-02-14 - Help corrected
         
     LICENSE
     Copyright (c) 2016 Wojciech Sciesinski
