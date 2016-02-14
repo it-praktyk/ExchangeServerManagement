@@ -1,49 +1,119 @@
 # Remove-DoubledSIPAddresses
+## SYNOPSIS
 Function intended for verifying and removing doubled SIP addresses from all mailboxes in Exchange Server environment
 
-## SYNOPSIS
-Function used to remove SIP addresses from mailboxes in Exchange Server environment which have duplicated SIPs
-    
-##DESCRIPTION 
-Function intended for verifying and removing doubled SIP addresses from all mailboxes in Exchange Server environment. Only address in a domain provided in a parameter CorrectSIPDomain will be keep.
-	
-##PARAMETER CorrectSIPDomain
-Name of domain for which correct SIPs belong
-	
-##PARAMETER CreateLogFile
-By default log file is created
-	
-##PARAMETER LogFileDirectoryPath
-By default log files are stored in the sub-folder "logs" in current path, if the "logs" subfolder is missed will be created
-	
-##PARAMETER LogFileNamePrefix
-Prefix used for creating rollback files name. Default is "SIPs-Removed-"
 
-##Base repository
-https://github.com/it-praktyk/Remove-DoubledSIPAddresses
+## SYNTAX
+```powershell
+Remove-DoubledSIPAddresses [-Identity] <Object> [[-CorrectSIPDomain] <string>] [-WhatIf] [-Confirm] [<CommonParameters>]
+```
 
-##NOTES
-AUTHOR: Wojciech Sciesinski, wojciech[at]sciesinski[dot]net
+## DESCRIPTION  
+Function intended for verifying and removing doubled SIP addresses from all mailboxes in Exchange Server environment.  
+Only address in a domain provided in a parameter CorrectSIPDomain will be kept.
+
+## PARAMETERS  
+### -Identity &lt;Object&gt;  
+The Identity parameter specifies the identity of the mailbox. You can use one of the following values:
+- GUID
+- Distinguished name (DN)
+- Display name
+- Domain\Account
+- User principal name (UPN)
+- LegacyExchangeDN
+- SmtpAddress
+- Alias
+
+```
+Required?                    true
+Position?                    0
+Accept pipeline input?       true (ByValue, ByPropertyName)  
+Parameter set name           (All)  
+Aliases                      Mailbox
+Dynamic?                     false
+```  
+
+### -CorrectSIPDomain &lt;String&gt;
+The name of domain for what correct SIPs belong. If the parameter is not set the domain name from PrimarySMTPAddress will be used.
+
+```
+Required?                    false
+Position?                    1
+Accept pipeline input?       false
+Parameter set name           (All)
+Aliases                      None
+Dynamic?                     false
+```
+
+
+## NOTES
+AUTHOR: Wojciech Sciesinski, wojciech[at]sciesinski[dot]net  
 KEYWORDS: PowerShell, Exchange, SIPAddresses, ProxyAddresses, Lync, migration
-   
-##VERSIONS HISTORY
-0.1.0 - 2015-05-27 - First version published on GitHub
-0.1.2 - 2015-05-29 - Switch address to secondary befor remove, post-report corrected
-0.1.3 - 2015-05-31 - Help updated
-	
-##TODO
-- check if Exchange cmdlets are available
+
+VERSIONS HISTORY
+- 0.1.0 - 2015-05-27 - First version published on GitHub
+- 0.1.2 - 2015-05-29 - Switch address to secondary befor remove, post-report corrected
+- 0.1.3 - 2015-05-31 - Help updated
+- 0.1.4 - 2015-06-09 - Primary SMTP address added to report file
+- 0.2.0 - 2016-02-10 - Report cappabilities removed from the function, input from pipeline added, the license changed to MIT
+- 0.2.1 - 2016-02-14 - Help corrected
+
+TODO
 - check function behaviour if email address policies are enabled
-	
-##LICENSE
-Copyright (C) 2015 Wojciech Sciesinski
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details.
-You should have received a copy of the GNU General Public License
-along with this program. If not, see <http://www.gnu.org/licenses/>
+
+
+LICENSE  
+Copyright (c) 2016 Wojciech Sciesinski  
+This function is licensed under The MIT License (MIT)  
+Full license text: https://opensource.org/licenses/MIT
+
+## EXAMPLES
+
+### EXAMPLE 1
+
+Remove doubled SIP based on the correct domain provided as the parameter.  
+Operation in the WhatIf mode so SIPAddressesBefore and SIPAddressesAfter are equal.
+
+```powershell
+
+	[PS] > Remove-DoubledSIPAddresses -Identity aa473815 -WhatIf -Verbose -CorrectSIPDomain contoso.com
+
+    VERBOSE: Mailbox with alias AA473815 has assigned 2 SIP addresses.
+    What if: Performing operation "Remove SIP address sip:ingrid.thomes@example.com" on Target "mailbox: AA473815".
+
+    MailboxAlias              : AA473815
+    MailboxDisplayName        : Wolters-van der Thomes, IAV (Ingrid)
+    MailboxSMTPPrimaryAddress : ingrid.wolters-van.der.thomes@example.com
+    MailboxGuid               : b201434a-1f62-4ee4-a446-e0b2bc7badc9
+    SIPAddressesBeforeCount   : 2
+    SIPAddressesBeforeList    : SIP:Ingrid.Wolters@contoso.com,sip:ingrid.thomes@example.com
+    SIPAddressesBefore        : {SIP:Ingrid.Wolters@contoso.com,sip:ingrid.thomes@example.com}
+    SIPAddressAfterCount      : 2
+    SIPAddressesAfterList     : SIP:Ingrid.Wolters@contoso.com,sip:ingrid.thomes@example.com
+    SIPAddressesAfter         : {SIP:Ingrid.Wolters@contoso.com,sip:ingrid.thomes@example.com}
+
+```
+
+### EXAMPLE 2
+
+Remove doubled SIP based on the domain used in PrimarySMTPAddress.
+
+```powershell
+
+	[PS] > Remove-DoubledSIPAddresses -Identity aa473815 -Verbose
+
+    VERBOSE: Mailbox with alias AA473815 has assigned 2 SIP addresses.
+	VERBOSE: SIP address Ingrid.Wolters@contoso.com is incorrect and will be deleted
+
+    MailboxAlias              : AA473815
+    MailboxDisplayName        : Wolters-van der Thomes, IAV (Ingrid)
+    MailboxSMTPPrimaryAddress : ingrid.wolters-van.der.thomes@tailspintoys.com
+    MailboxGuid               : b201434a-1f62-4ee4-a446-e0b2bc7badc9
+    SIPAddressesBeforeCount   : 2
+    SIPAddressesBeforeList    : SIP:Ingrid.Wolters@contoso.com,sip:ingrid.thomes@tailspintoys.com
+    SIPAddressesBefore        : {SIP:Ingrid.Wolters@contoso.com,sip:ingrid.thomes@tailspintoys.com}
+    SIPAddressAfterCount      : 1
+    SIPAddressesAfterList     : SIP:ingrid.thomes@tailspintoys.com
+    SIPAddressesAfter         : {SIP:ingrid.thomes@tailspintoys.com}
+
+```
