@@ -1,4 +1,4 @@
-﻿function Remove-DoubledSIPAddresses {
+﻿function Remove-MultiSIPFromMailbox {
 <#
     .SYNOPSIS
     Function intended for verifying and removing doubled SIP addresses from all mailboxes in Exchange Server environment
@@ -31,7 +31,7 @@
 
     .EXAMPLE
     
-    [PS] > Remove-DoubledSIPAddresses -Identity aa473815 -WhatIf -Verbose -CorrectSIPDomain contoso.com
+    [PS] > Remove-MultiSIPFromMailbox -Identity aa473815 -WhatIf -Verbose -CorrectSIPDomain contoso.com
     
     VERBOSE: Mailbox with alias AA473815 has assigned 2 SIP addresses.
     What if: Performing operation "Remove SIP address sip:ingrid.thomes@example.com" on Target "mailbox: AA473815".
@@ -49,7 +49,7 @@
     
     .EXAMPLE
     
-    [PS] > Remove-DoubledSIPAddresses -Identity aa473815 -Verbose
+    [PS] > Remove-MultiSIPFromMailbox -Identity aa473815 -Verbose
     
     VERBOSE: Mailbox with alias AA473815 has assigned 2 SIP addresses.
 	VERBOSE: SIP address Ingrid.Wolters@contoso.com is incorrect and will be deleted
@@ -66,7 +66,7 @@
     SIPAddressesAfter         : {SIP:ingrid.thomes@tailspintoys.com}
 
     .LINK
-    https://github.com/it-praktyk/Remove-DoubledSIPAddresses
+    https://github.com/it-praktyk/Remove-MultiSIPFromMailbox
     
     .LINK
     https://www.linkedin.com/in/sciesinskiwojciech
@@ -82,6 +82,7 @@
     0.1.4 - 2015-06-09 - Primary SMTP address added to report file
     0.2.0 - 2016-02-10 - Report cappabilities removed from the function, input from pipeline added, the licence changed to MIT
 	0.2.1 - 2016-02-14 - Help corrected
+	0.3.0 - 2016-02-14 - The function renamed from Remove-DoubledSIPAddresses to Remove-MultiSIPFromMailbox
         
     LICENSE
     Copyright (c) 2016 Wojciech Sciesinski

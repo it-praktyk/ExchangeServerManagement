@@ -1,11 +1,11 @@
-# Remove-DoubledSIPAddresses
+# Remove-MultiSIPFromMailbox
 ## SYNOPSIS
 Function intended for verifying and removing doubled SIP addresses from all mailboxes in Exchange Server environment
 
 
 ## SYNTAX
 ```powershell
-Remove-DoubledSIPAddresses [-Identity] <Object> [[-CorrectSIPDomain] <string>] [-WhatIf] [-Confirm] [<CommonParameters>]
+Remove-MultiSIPFromMailbox [-Identity] <Object> [[-CorrectSIPDomain] <string>] [-WhatIf] [-Confirm] [<CommonParameters>]
 ```
 
 ## DESCRIPTION  
@@ -57,6 +57,7 @@ VERSIONS HISTORY
 - 0.1.4 - 2015-06-09 - Primary SMTP address added to report file
 - 0.2.0 - 2016-02-10 - Report cappabilities removed from the function, input from pipeline added, the license changed to MIT
 - 0.2.1 - 2016-02-14 - Help corrected
+- 0.3.0 - 2016-02-14 - The function renamed from Remove-DoubledSIPAddresses to Remove-MultiSIPFromMailbox
 
 TODO
 - check function behaviour if email address policies are enabled
@@ -76,7 +77,7 @@ Operation in the WhatIf mode so SIPAddressesBefore and SIPAddressesAfter are equ
 
 ```powershell
 
-	[PS] > Remove-DoubledSIPAddresses -Identity aa473815 -WhatIf -Verbose -CorrectSIPDomain contoso.com
+	[PS] > Remove-MultiSIPFromMailbox -Identity aa473815 -WhatIf -Verbose -CorrectSIPDomain contoso.com
 
     VERBOSE: Mailbox with alias AA473815 has assigned 2 SIP addresses.
     What if: Performing operation "Remove SIP address sip:ingrid.thomes@example.com" on Target "mailbox: AA473815".
@@ -100,7 +101,7 @@ Remove doubled SIP based on the domain used in PrimarySMTPAddress.
 
 ```powershell
 
-	[PS] > Remove-DoubledSIPAddresses -Identity aa473815 -Verbose
+	[PS] > Remove-MultiSIPFromMailbox -Identity aa473815 -Verbose
 
     VERBOSE: Mailbox with alias AA473815 has assigned 2 SIP addresses.
 	VERBOSE: SIP address Ingrid.Wolters@contoso.com is incorrect and will be deleted
