@@ -1,5 +1,5 @@
 Function Add-MailboxSubfolderPermission {
-	
+    
 <#
     .SYNOPSIS
     Function intended for add permissions to subfolders in mailbox on Exchange
@@ -27,7 +27,7 @@ Function Add-MailboxSubfolderPermission {
           
     .NOTES
     AUTHOR: Wojciech Sciesinski, wojciech[at]sciesinski[dot]net
-    KEYWORDS: PowerShell
+    KEYWORDS: PowerShell, Exchange, permissions, delegates
 
     Code partially based on 
     http://exchangeserverpro.com/grant-read-access-exchange-mailbox/
@@ -35,11 +35,13 @@ Function Add-MailboxSubfolderPermission {
     VERSIONS HISTORY
     - 0.1.0 - 2016-02-12 - The first draft
     - 0.2.0 - 2016-02-12 - the permission on the top of information store added, errors corrected
+    - 0.3.0 - 2016-02-16 - added support to multi level folder path, input for SubFolder is standarized
 
     TODO
     - update help
     - check permissions on the top of information store
 	- handle errors in situation when the permissions for the user exist now
+    - implement -WhatIf
         
     LICENSE
     Copyright (c) 2016 Wojciech Sciesinski
@@ -54,13 +56,17 @@ Function Add-MailboxSubfolderPermission {
         [alias("Mailbox")]
         [string]$Identity,
         [Parameter (Mandatory=$true)]
-        [alias("Folder","Path")]
+        [alias("Folder", "Path")]
         [String]$SubFolder,
         [Parameter(Mandatory = $true)]
         [string]$User,
         [Parameter(Mandatory = $true)]
         [string]$AccessRights
     )
+    
+    
+    Throw "Code not fully tested! Please use with caution!"
+    
     
     $exclusions = @("/Sync Issues",
     "/Sync Issues/Conflicts",
@@ -72,10 +78,38 @@ Function Add-MailboxSubfolderPermission {
     "/Versions"
     )
     
+    $RequiredPermissions = "FolderVisible", "ReadItems", "FolderOwner"
+    
+    If (-not ($SubFolder.StartWith('/') -or $SubFolder.StartsWith('\'))) {
+        
+        [String]$SubFolder = "/{0}" -f $SubFolder
+        
+    }
+    
+    If ($SubFolder.EndsWith('/') -or $SubFolder.EndsWith('\')) {
+        
+        $SubFolder = $SubFolder.Substring(0, ($SubFolder.Length - 1))
+        
+    }
+    
+    [String]$NormalizedSubFolder = $SubFolder.Replace("/", "\")
+    
+    $SplitedSubFolders = $NormalizedSubFolder.Split("\")
+    
+    $Levels = ($SplitedSubFolders.Length) - 1
+    
+    If ($Levels -eq 0) {
+        
+        [String]$MessageText = "Operations can't be performed at {0}" -f $SubFolder
+        
+        Throw $MessageText
+        
+    }
+    
     $mailboxfolders = @(Get-MailboxFolderStatistics $Mailbox | Where-Object -FilterScript { !($exclusions -icontains $_.FolderPath) } | Select-Object -Property FolderPath)
     
     foreach ($mailboxfolder in $mailboxfolders) {
-    
+        
         $folder = $mailboxfolder.FolderPath.Replace('/', '\')
         
         if ($folder -match 'Top of Information Store') {
@@ -84,7 +118,8 @@ Function Add-MailboxSubfolderPermission {
             
         }
         
-        If ($folder -eq $subfolder -or $folder -eq $subfolder) {
+        
+        If ($folder -eq $NormalizedSubFolder) {
             
             [String]$identity = "{0}:{1}" -f $mailbox, $folder
             
@@ -102,22 +137,24 @@ Function Add-MailboxSubfolderPermission {
     
     If ($permissionadded) {
         
-        #Check if the user has access to the "Top of Information Store" folder
         
-        $RequiredPermissions = "FolderVisible", "ReadItems", "FolderOwner"
-        
-        $UserRightsOnTop = Get-MailboxFolderPermission -Identity $mailbox -User $User -ErrorAction SilentlyContinue
-        
-        
-        If (-not $($RequiredPermissions -icontains (out-string -InputObject $UserRightsOnTop.AccessRights))) {
+        For ($i = 0; $i -lt $Levels; $i++) {
             
-            [String]$MessageText = "Adding FolderVisible permision on {0}:\ to {1}" -f $mailbox , $user
+            $CurrentParentFolder += "\{0}" -f $SplitedSubFolders[$i]
             
-            Write-Verbose -Message $MessageText
+            [String]$CurrentFolderIdentity = "{0}:{1}" -f $CurrentParentFolder
             
-            [String]$TopFolder = "{0}:\" -f $Mailbox
+            $UserRightsOnCurrentParentFolder = Get-MailboxFolderPermission -Identity $CurrentFolderIdentity -User $User -ErrorAction SilentlyContinue
             
-            Add-MailboxFolderPermission -Identity $TopFolder -User $user -AccessRights FolderVisible #-ErrorAction SilentlyContinue | out-Null
+            If (-not $($RequiredPermissions -icontains (out-string -InputObject $UserRightsOnCurrentParentFolder.AccessRights))) {
+                
+                [String]$MessageText = "Adding FolderVisible permision on {0} to {1}" -f $CurrentFolderIdentity, $user
+                
+                Write-Verbose -Message $MessageText
+                
+                Add-MailboxFolderPermission -Identity $TopFolder -User $user -AccessRights FolderVisible #-ErrorAction SilentlyContinue | out-Null                                        
+                
+            }
             
         }
         
