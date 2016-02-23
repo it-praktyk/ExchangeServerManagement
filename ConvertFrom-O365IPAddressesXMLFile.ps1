@@ -54,7 +54,7 @@
     
     .EXAMPLE
     
-    PS Desktop:\> ConvertFrom-O365IPAddressesXMLFile -Path .\O365IPAddresses.xml | get-member
+    [PS] > ConvertFrom-O365IPAddressesXMLFile -Path .\O365IPAddresses.xml | get-member
 
     TypeName: System.Management.Automation.PSCustomObject
 
@@ -86,6 +86,7 @@
     - 0.1.0 - 2016-02-23 - The first working version
     - 0.1.1 - 2016-02-24 - The parameter name in the helper function ConvertTo-Mask corrected
     - 0.1.2 - 2016-02-24 - The output spelling corrected for SubNetMaskLength, help update, the function reformatted
+	- 0.1.3 - 2016-02-24 - Small correction of code in an example
 
     TODO
     - add only summary mode/switch
