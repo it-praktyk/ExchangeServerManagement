@@ -84,9 +84,10 @@
    
     VERSIONS HISTORY
     - 0.1.0 - 2016-02-23 - The first working version
-    - 0.1.1 - 2016-02-24 - The parameter name in the helper function ConvertTo-Mask corrected
-    - 0.1.2 - 2016-02-24 - The output spelling corrected for SubNetMaskLength, help update, the function reformatted
-	- 0.1.3 - 2016-02-24 - Small correction of code in an example
+    - 0.1.1 - 2016-02-23 - The parameter name in the helper function ConvertTo-Mask corrected
+    - 0.1.2 - 2016-02-23 - The output spelling corrected for SubNetMaskLength, help update, the function reformatted
+    - 0.1.3 - 2016-02-23 - Small correction of code in an example
+    - 0.1.4 - 2016-02-24 - Dates for versions 0.1.1 - 0.1.3 corrected, alliases for some cmdlets expanded to full names
 
     TODO
     - add only summary mode/switch
@@ -137,7 +138,7 @@
         
         $O365Services = $CurrentO365AddressesFile.products.product
         
-        $O365ServicesCount = $(($O365Services | measure).Count)
+        $O365ServicesCount = $(($O365Services | Measure-Object ).Count)
         
         [String]$MessageText = "{0} products found in the xml file {1}" -f $O365ServicesCount, $Path
         
@@ -151,7 +152,7 @@
             
             $CurrentAddressList = $O365Services[$i] | Select-Object -ExpandProperty addresslist
             
-            $CurrentListCount = ($CurrentAddressList | measure).count
+            $CurrentListCount = ($CurrentAddressList | Measure-Object ).count
             
             [String]$MessageText = "Start processing for {0}, {1} addressess lists found" -f $CurrentServiceName, $CurrentListCount
             
@@ -161,7 +162,7 @@
                 
                 if ($CurrentListCount -eq 1) {
                     
-                    $CurrentAddresses = $CurrentAddressList | Select -expandproperty address -ErrorAction SilentlyContinue
+                    $CurrentAddresses = $CurrentAddressList | Select-Object -expandproperty address -ErrorAction SilentlyContinue
                     
                     $CurrentListType = $CurrentAddressList.type
                     
@@ -169,13 +170,13 @@
                 
                 else {
                     
-                    $CurrentAddresses = $CurrentAddressList[$n] | Select -expandproperty address -ErrorAction SilentlyContinue
+                    $CurrentAddresses = $CurrentAddressList[$n] | Select-object -expandproperty address -ErrorAction SilentlyContinue
                     
                     $CurrentListType = $CurrentAddressList[$n].type
                     
                 }
                 
-                $CurrentAddressCount = $(($CurrentAddresses | measure).count)
+                $CurrentAddressCount = $(($CurrentAddresses | Measure-Object).count)
                 
                 [String]$MessageText = "For the service {0} on the list {1} {2} addresses found." -f $CurrentServiceName, $CurrentListType, $CurrentAddressCount
                 

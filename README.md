@@ -40,8 +40,10 @@ KEYWORDS: PowerShell, Exchange, Office 365, O365, XML, proxy
 
 VERSIONS HISTORY
 - 0.1.0 - 2016-02-23 - The first working version
-- 0.1.1 - 2016-02-24 - The parameter name in the helper function ConvertTo-Mask corrected
-- 0.1.2 - 2016-02-24 - The output spelling corrected for SubNetMaskLength, help update, the function reformatted
+- 0.1.1 - 2016-02-23 - The parameter name in the helper function ConvertTo-Mask corrected
+- 0.1.2 - 2016-02-23 - The output spelling corrected for SubNetMaskLength, help update, the function reformatted
+- 0.1.3 - 2016-02-23 - Small correction of code in an example
+- 0.1.4 - 2016-02-24 - Dates for versions 0.1.1 - 0.1.3 corrected, alliases for some cmdlets expanded to full names
 
 TODO
 - add only summary mode/switch
