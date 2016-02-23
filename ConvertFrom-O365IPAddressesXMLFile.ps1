@@ -1,5 +1,5 @@
 ﻿function ConvertFrom-O365IPAddressesXMLFile {
-    
+
     <#
     .SYNOPSIS
     Convert the O365IPAddresses.xml file to the custom PowerShell object
@@ -14,12 +14,63 @@
     .PARAMETER Path
     The xml file containing data like O365IPAddresses.xml downloaded manually. 
     If the the parameter is ommited the file O365IPAddresses.xml will be downloaded from the Microsoft site and saved with
-        
+    
+    .INPUT
+    The xml file published by Microsoft what contains the list of IP addresses ranges used by Office 365 addresses. 
+    
     .OUTPUTS
-    System.Object[]
+    The custom PowerShell object what contains properties: Service,Type,IPAddress,SubNetMaskLength,SubnetMask,Url
   
     .EXAMPLE
     ConvertFrom-O365IPAddressesXMLFile
+    
+    Service          : o365
+    Type             : IPv6
+    IPAddress        : 2603:1030:800:5::bfee:a0ad
+    SubNetMaskLength : 128
+    SubnetMask       :
+    Url              :
+    
+    <Output partially omitted>
+    
+    Service          : LYO
+    Type             : IPv4
+    IPAddress        : 23.103.129.128
+    SubNetMaskLength : 25
+    SubnetMask       : 255.255.255.128
+    Url              :
+    
+    <Output partially omitted>
+    
+    Service          : ProPlus
+    Type             : URL
+    IPAddress        :
+    SubNetMaskLength : 0
+    SubnetMask       :
+    Url              : go.microsoft.com
+    
+    <Output partially omitted>
+    
+    
+    .EXAMPLE
+    
+    PS Desktop:\> ConvertFrom-O365IPAddressesXMLFile -Path .\O365IPAddresses.xml | get-member
+
+    TypeName: System.Management.Automation.PSCustomObject
+
+    Name             MemberType   Definition
+    ----             ----------   ----------
+    Equals           Method       bool Equals(System.Object obj)
+    GetHashCode      Method       int GetHashCode()
+    GetType          Method       type GetType()
+    ToString         Method       string ToString()
+    IPAddress        NoteProperty ipaddress IPAddress=2603:1030:800:5::bfee:a0ad
+    Service          NoteProperty string Service=o365
+    SubnetMask       NoteProperty string SubnetMask=
+    SubNetMaskLenght NoteProperty int SubNetMaskLenght=128
+    Type             NoteProperty string Type=IPv6
+    Url              NoteProperty string Url=
+    
      
     .LINK
     https://github.com/it-praktyk/ConvertFrom-O365IPAddressesXMLFile
@@ -29,14 +80,14 @@
           
     .NOTES
     AUTHOR: Wojciech Sciesinski, wojciech[at]sciesinski[dot]net
-    KEYWORDS: PowerShell, Exchange, Office 365, XML, proxy
+    KEYWORDS: PowerShell, Exchange, Office 365, O365, XML, proxy
    
     VERSIONS HISTORY
     - 0.1.0 - 2016-02-23 - The first working version
-	- 0.1.1 - 2016-02-24 - The parameter name in the helper function ConvertTo-Mask corrected
+    - 0.1.1 - 2016-02-24 - The parameter name in the helper function ConvertTo-Mask corrected
+    - 0.1.2 - 2016-02-24 - The output spelling corrected for SubNetMaskLength, help update, the function reformatted
 
     TODO
-    - update help - INPUT/OUTPUTS
     - add only summary mode/switch
     - add support for downloading the file via proxy with authentication
     - add parameter to custom naming downloaded file
@@ -143,11 +194,11 @@
                             
                             [ipaddress]$IPAddress = $O365ServicesCurrentAddress.Split("/")[0]
                             
-                            [int]$SubNetMaskLenght = $O365ServicesCurrentAddress.Split("/")[1]
+                            [int]$SubNetMaskLength = $O365ServicesCurrentAddress.Split("/")[1]
                             
                             If ($CurrentListType -match "IPv4") {
                                 
-                                [String]$SubNetMask = ConvertTo-Mask -MaskLength $SubNetMaskLenght
+                                [String]$SubNetMask = ConvertTo-Mask -MaskLength $SubNetMaskLength
                                 
                             }
                             
@@ -160,9 +211,9 @@
                         
                         [ipaddress]$IPAddress = $O365ServicesCurrentAddress
                         
-                        [int]$SubNetMaskLenght = 32
+                        [int]$SubNetMaskLength = 32
                         
-                        [String]$SubNetMask = ConvertTo-Mask -MaskLength $SubNetMaskLenght
+                        [String]$SubNetMask = ConvertTo-Mask -MaskLength $SubNetMaskLength
                         
                         [String]$Url = $null
                         
@@ -171,7 +222,7 @@
                         
                         [ipaddress]$IPAddress = $O365ServicesCurrentAddress
                         
-                        [int]$SubNetMaskLenght = 128
+                        [int]$SubNetMaskLength = 128
                         
                         [String]$SubNetMask = $null
                         
@@ -183,7 +234,7 @@
                         
                         [ipaddress]$IPAddress = $null
                         
-                        [int]$SubNetMaskLenght = $null
+                        [int]$SubNetMaskLength = $null
                         
                         [String]$SubNetMask = $null
                         
@@ -199,7 +250,7 @@
                     
                     $Result | Add-Member -MemberType NoteProperty -Name IPAddress -Value $IPAddress
                     
-                    $Result | Add-Member -MemberType NoteProperty -Name SubNetMaskLenght -Value $SubNetMaskLenght
+                    $Result | Add-Member -MemberType NoteProperty -Name SubNetMaskLength -Value $SubNetMaskLength
                     
                     $Result | Add-Member -MemberType NoteProperty -Name SubnetMask -value $SubNetMask
                     
@@ -208,7 +259,7 @@
                     $Results += $Result
                     
                     #Remove previously set variables
-                    $VariablesToClear = "SubnetMask", "SubnetMaskLenght", "IPAddress", "Url"
+                    $VariablesToClear = "SubnetMask", "SubNetMaskLength", "IPAddress", "Url"
                     
                     $VariablesToClear | ForEach-Object -Process {
                         
@@ -238,13 +289,13 @@ function ConvertTo-Mask {
     
 <#
     .SYNOPSIS
-	Convert mask length to dotted binary format
+    Convert mask length to dotted binary format
     
     .DESCRIPTION
     The function what convert mask length to binary mask for IPv4 address
     
     .PARAMETER MaskLength
-	The length of mask in IPv4 address
+    The length of mask in IPv4 address
             
     .OUTPUTS
     The scring containging dotted mask for IPv4 addresses
@@ -266,7 +317,7 @@ function ConvertTo-Mask {
    
     VERSIONS HISTORY
     - 0.1.0 - 2016-02-23 - The first working version
-	- 0.1.1 - 2016-02-24 - The parameter name corrected
+    - 0.1.1 - 2016-02-24 - The parameter name corrected
 
     TODO
         
