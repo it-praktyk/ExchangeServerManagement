@@ -32,7 +32,8 @@
     KEYWORDS: PowerShell, Exchange, Office 365, XML, proxy
    
     VERSIONS HISTORY
-    0.1.0 -  2016-02-23 - The first working version
+    - 0.1.0 - 2016-02-23 - The first working version
+	- 0.1.1 - 2016-02-24 - The parameter name in the helper function ConvertTo-Mask corrected
 
     TODO
     - update help - INPUT/OUTPUTS
@@ -237,19 +238,19 @@ function ConvertTo-Mask {
     
 <#
     .SYNOPSIS
-    
+	Convert mask length to dotted binary format
     
     .DESCRIPTION
+    The function what convert mask length to binary mask for IPv4 address
     
-    
-    
-    .PARAMETER MaskLenght
+    .PARAMETER MaskLength
+	The length of mask in IPv4 address
             
     .OUTPUTS
     The scring containging dotted mask for IPv4 addresses
   
     .EXAMPLE
-    [PS] >ConvertTo-Mask -MaskLenght 23
+    [PS] >ConvertTo-Mask -MaskLength 23
     
     255.255.254.0
      
@@ -264,7 +265,8 @@ function ConvertTo-Mask {
     KEYWORDS: PowerShell, network, network mask, IPv4
    
     VERSIONS HISTORY
-    0.1.0 -  2016-02-23 - The first working version
+    - 0.1.0 - 2016-02-23 - The first working version
+	- 0.1.1 - 2016-02-24 - The parameter name corrected
 
     TODO
         
@@ -279,11 +281,11 @@ function ConvertTo-Mask {
     param (
         [Parameter(Mandatory = $true)]
         [ValidateRange(1, 32)]
-        [Int]$MaskLenght
+        [Int]$MaskLength
         
     )
     
-    [Int]$FullOctetsCounts = [math]::Truncate($MaskLenght/8)
+    [Int]$FullOctetsCounts = [math]::Truncate($MaskLength/8)
     
     [String]$FullOctetsText = "255." * $FullOctetsCounts
     
@@ -294,7 +296,7 @@ function ConvertTo-Mask {
     }
     Else {
         
-        [Int]$MiddleBites = $($MaskLenght - ($FullOctetsCounts * 8))
+        [Int]$MiddleBites = $($MaskLength - ($FullOctetsCounts * 8))
         
         switch ( $MiddleBites) {
             
