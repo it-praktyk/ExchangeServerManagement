@@ -1,0 +1,356 @@
+
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : Clone
+MemberType : Method
+Definition : System.Object Clone(), System.Object ICloneable.Clone()
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : CopyChangesFrom
+MemberType : Method
+Definition : void IConfigurable.CopyChangesFrom(Microsoft.Exchange.Data.IConfigurable source)
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : Equals
+MemberType : Method
+Definition : bool Equals(System.Object obj)
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : GetHashCode
+MemberType : Method
+Definition : int GetHashCode()
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : GetProperties
+MemberType : Method
+Definition : System.Object[] 
+             GetProperties(System.Collections.Generic.ICollection[Microsoft.Exchange.Data.PropertyDefinition] 
+             propertyDefinitions), System.Object[] IReadOnlyPropertyBag.GetProperties(System.Collections.Generic.IColle
+             ction[Microsoft.Exchange.Data.PropertyDefinition] propertyDefinitionArray)
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : GetProxyInfo
+MemberType : Method
+Definition : System.Object GetProxyInfo(), System.Object ICmdletProxyable.GetProxyInfo()
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : GetType
+MemberType : Method
+Definition : type GetType()
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : ResetChangeTracking
+MemberType : Method
+Definition : void IConfigurable.ResetChangeTracking()
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : SetProperties
+MemberType : Method
+Definition : void IPropertyBag.SetProperties(System.Collections.Generic.ICollection[Microsoft.Exchange.Data.PropertyDef
+             inition] propertyDefinitionArray, System.Object[] propertyValuesArray)
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : SetProxyInfo
+MemberType : Method
+Definition : void SetProxyInfo(System.Object proxyInfoValue), void ICmdletProxyable.SetProxyInfo(System.Object 
+             proxyInfo)
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : ToString
+MemberType : Method
+Definition : string ToString()
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : Validate
+MemberType : Method
+Definition : Microsoft.Exchange.Data.ValidationError[] Validate(), Microsoft.Exchange.Data.ValidationError[] 
+             IConfigurable.Validate()
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : PSComputerName
+MemberType : NoteProperty
+Definition : System.String PSComputerName=ex2013-1.ex2013a.lab
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : PSShowComputerName
+MemberType : NoteProperty
+Definition : System.Boolean PSShowComputerName=False
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : RunspaceId
+MemberType : NoteProperty
+Definition : System.Guid RunspaceId=da36ea79-97d2-4700-af3f-d407b7e1a0ce
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : Item
+MemberType : ParameterizedProperty
+Definition : System.Object IPropertyBag.Item(Microsoft.Exchange.Data.PropertyDefinition propertyDefinition) {get;set;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : AdminDisplayVersion
+MemberType : Property
+Definition : Microsoft.Exchange.Data.ServerVersion AdminDisplayVersion {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : CurrentConfigDomainController
+MemberType : Property
+Definition : string CurrentConfigDomainController {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : CurrentDomainControllers
+MemberType : Property
+Definition : Microsoft.Exchange.Data.MultiValuedProperty[string] CurrentDomainControllers {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : CurrentGlobalCatalogs
+MemberType : Property
+Definition : Microsoft.Exchange.Data.MultiValuedProperty[string] CurrentGlobalCatalogs {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : CustomerFeedbackEnabled
+MemberType : Property
+Definition : System.Nullable[bool] CustomerFeedbackEnabled {get;set;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : DataPath
+MemberType : Property
+Definition : Microsoft.Exchange.Data.LocalLongFullPath DataPath {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : DistinguishedName
+MemberType : Property
+Definition : string DistinguishedName {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : Domain
+MemberType : Property
+Definition : string Domain {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : Edition
+MemberType : Property
+Definition : Microsoft.Exchange.Data.ServerEditionType Edition {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : ErrorReportingEnabled
+MemberType : Property
+Definition : System.Nullable[bool] ErrorReportingEnabled {get;set;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : ExchangeLegacyDN
+MemberType : Property
+Definition : string ExchangeLegacyDN {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : ExchangeLegacyServerRole
+MemberType : Property
+Definition : int ExchangeLegacyServerRole {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : ExchangeVersion
+MemberType : Property
+Definition : Microsoft.Exchange.Data.ExchangeObjectVersion ExchangeVersion {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : Fqdn
+MemberType : Property
+Definition : string Fqdn {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : Guid
+MemberType : Property
+Definition : guid Guid {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : Id
+MemberType : Property
+Definition : Microsoft.Exchange.Data.Directory.ADObjectId Id {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : Identity
+MemberType : Property
+Definition : Microsoft.Exchange.Data.ObjectId Identity {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : InternetWebProxy
+MemberType : Property
+Definition : uri InternetWebProxy {get;set;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : IsClientAccessServer
+MemberType : Property
+Definition : bool IsClientAccessServer {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : IsE14OrLater
+MemberType : Property
+Definition : bool IsE14OrLater {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : IsE15OrLater
+MemberType : Property
+Definition : bool IsE15OrLater {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : IsEdgeServer
+MemberType : Property
+Definition : bool IsEdgeServer {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : IsExchange2007OrLater
+MemberType : Property
+Definition : bool IsExchange2007OrLater {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : IsExchangeTrialEdition
+MemberType : Property
+Definition : bool IsExchangeTrialEdition {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : IsExpiredExchangeTrialEdition
+MemberType : Property
+Definition : bool IsExpiredExchangeTrialEdition {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : IsFrontendTransportServer
+MemberType : Property
+Definition : bool IsFrontendTransportServer {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : IsHubTransportServer
+MemberType : Property
+Definition : bool IsHubTransportServer {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : IsMailboxServer
+MemberType : Property
+Definition : bool IsMailboxServer {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : IsProvisionedServer
+MemberType : Property
+Definition : bool IsProvisionedServer {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : IsUnifiedMessagingServer
+MemberType : Property
+Definition : bool IsUnifiedMessagingServer {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : IsValid
+MemberType : Property
+Definition : bool IsValid {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : MailboxProvisioningAttributes
+MemberType : Property
+Definition : Microsoft.Exchange.Data.Directory.SystemConfiguration.MailboxProvisioningAttributes 
+             MailboxProvisioningAttributes {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : MonitoringGroup
+MemberType : Property
+Definition : string MonitoringGroup {get;set;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : Name
+MemberType : Property
+Definition : string Name {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : NetworkAddress
+MemberType : Property
+Definition : Microsoft.Exchange.Data.NetworkAddressCollection NetworkAddress {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : ObjectCategory
+MemberType : Property
+Definition : Microsoft.Exchange.Data.Directory.ADObjectId ObjectCategory {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : ObjectClass
+MemberType : Property
+Definition : Microsoft.Exchange.Data.MultiValuedProperty[string] ObjectClass {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : ObjectState
+MemberType : Property
+Definition : Microsoft.Exchange.Data.ObjectState ObjectState {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : OrganizationalUnit
+MemberType : Property
+Definition : string OrganizationalUnit {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : OrganizationId
+MemberType : Property
+Definition : Microsoft.Exchange.Data.Directory.OrganizationId OrganizationId {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : OriginatingServer
+MemberType : Property
+Definition : string OriginatingServer {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : ProductID
+MemberType : Property
+Definition : string ProductID {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : RemainingTrialPeriod
+MemberType : Property
+Definition : Microsoft.Exchange.Data.EnhancedTimeSpan RemainingTrialPeriod {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : ServerRole
+MemberType : Property
+Definition : Microsoft.Exchange.Data.Directory.SystemConfiguration.ServerRole ServerRole {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : Site
+MemberType : Property
+Definition : Microsoft.Exchange.Data.Directory.ADObjectId Site {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : StaticConfigDomainController
+MemberType : Property
+Definition : string StaticConfigDomainController {get;set;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : StaticDomainControllers
+MemberType : Property
+Definition : Microsoft.Exchange.Data.MultiValuedProperty[string] StaticDomainControllers {get;set;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : StaticExcludedDomainControllers
+MemberType : Property
+Definition : Microsoft.Exchange.Data.MultiValuedProperty[string] StaticExcludedDomainControllers {get;set;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : StaticGlobalCatalogs
+MemberType : Property
+Definition : Microsoft.Exchange.Data.MultiValuedProperty[string] StaticGlobalCatalogs {get;set;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : WhenChanged
+MemberType : Property
+Definition : System.Nullable[datetime] WhenChanged {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : WhenChangedUTC
+MemberType : Property
+Definition : System.Nullable[datetime] WhenChangedUTC {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : WhenCreated
+MemberType : Property
+Definition : System.Nullable[datetime] WhenCreated {get;}
+
+TypeName   : Microsoft.Exchange.Data.Directory.Management.ExchangeServer
+Name       : WhenCreatedUTC
+MemberType : Property
+Definition : System.Nullable[datetime] WhenCreatedUTC {get;}
+
+
+
