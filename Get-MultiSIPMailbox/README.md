@@ -47,6 +47,7 @@ VERSIONS HISTORY
 - 0.1.0 - 2016-02-12 - First version published on GitHub
 - 0.1.1 - 2016-02-12 - Help updated
 - 0.1.2 - 2016-02-14 - Example updated
+- 0.2.0 - 2016-05-12 - Help structure corrected, script reformatted, verbose message corrected, improved execution time
 
 LICENSE  
 Copyright (c) 2016 Wojciech Sciesinski  

@@ -18,7 +18,7 @@
     - SmtpAddress
     - Alias
     
-    .INPUT
+    .INPUTS
     To see the input types that this cmdlet accepts, see Cmdlet Input and Output Types (http://go.microsoft.com/fwlink/p/?linkId=313798). If the Input Type field for a cmdlet is blank, the cmdlet doesn't accept input data.
     The function accept the same input types like Get-Mailbox.
     
@@ -66,8 +66,9 @@
    
     VERSIONS HISTORY
     - 0.1.0 - 2016-02-12 - First version published on GitHub
-	- 0.1.1 - 2016-02-12 - Help updated
-	- 0.1.2 - 2016-02-14 - Example updated
+    - 0.1.1 - 2016-02-12 - Help updated
+    - 0.1.2 - 2016-02-14 - Example updated
+	- 0.2.0 - 2016-05-12 - Help structure corrected, script reformatted, verbose message corrected, improved execution time
             
     LICENSE
     Copyright (c) 2016 Wojciech Sciesinski
@@ -100,11 +101,11 @@
             Throw $MessageText
             
         }
-        
-        $Results = @()
-        
+
+		$Results = New-Object System.Collections.ArrayList
+		
     }
-    
+	
     PROCESS {
         
         ForEach ($MailboxInLoop in $Identity) {
@@ -126,7 +127,7 @@
             
             If ($CurrentMailboxSIPAddressesCount -gt 1) {
                 
-                [String]$MessageText = "Mailbox with alias {0} has assigned {2} SIP addresses." -f $CurrentMailbox.Alias, $CurrentMailboxSIPAddressesCount
+                [String]$MessageText = "Mailbox with alias {0} has assigned {1} SIP addresses." -f $CurrentMailbox.Alias, $CurrentMailboxSIPAddressesCount
                 
                 Write-Verbose -Message $MessageText
                 
@@ -148,7 +149,7 @@
                 
                 $Result | Add-Member -Type 'NoteProperty' -Name SIPAddresses -Value $CurrentMailboxSIPAddresses
                 
-                $Results += $Result
+                $Results.Add($Result) | Out-Null
                 
             }
             
