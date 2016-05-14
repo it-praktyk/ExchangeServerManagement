@@ -6,30 +6,30 @@
     .DESCRIPTION
     Function which can be used to verifing email addresses in Microsoft Exchange Server environment. 
     
-	Checks perfomed: 
+    Checks perfomed: 
     a) if an email address provided as parameter value contains wrong characters e.g. spaces at the begining/end
     b) if an email address format is complaint with requirements - check Wikipedia https://en.wikipedia.org/wiki/Email_address
-	c) if an email address is from a domain which are added to the accepted domains list of is in the list passed as parameter value
+    c) if an email address is from a domain which are added to the accepted domains list of is in the list passed as parameter value
     d) if an email address is currently assigned to any object in Exchange environment (a conflicted object exist)
-	e) if an email address is currently set as PrimarySMTPAddress for existing object
+    e) if an email address is currently set as PrimarySMTPAddress for existing object
     
     .PARAMETER EmailAddress
     Email address which need to be verified in Exchange environment
     
     .PARAMETER TestEmailFormat
-	Set to false to skip testing email address format
+    Set to false to skip testing email address format
     
     .PARAMETER TestAcceptedDomains
-	Set to false to skip testing if domain of an email address is in accepted domain list
+    Set to false to skip testing if domain of an email address is in accepted domain list
     
     .PARAMETER TestIfExists
-	Set to false to skip testing if an email address exist in mail organization
+    Set to false to skip testing if an email address exist in mail organization
     
     .PARAMETER TestIsPrimary
-	Set to false to skip testing if email is primary for existing object
+    Set to false to skip testing if email is primary for existing object
 
     .PARAMETER AcceptedDomains
-	The list of domains used to testing if email is from accepted domains.
+    The list of domains used to testing if email is from accepted domains.
 
     .EXAMPLE
     [PS] > Test-EmailAddress -EmailAddress dummy@example.com 
@@ -139,24 +139,16 @@
     0.6.0 - 2015-12-22 - the function rewriten, information about license added
     0.7.0 - 2015-12-29 - validation extended and corrected
     0.8.0 - 2015-12-31 - the function tested, the parameter $AcceptedDomains implemented, help updated
+	0.9.0 - 2016-05-12 - license changed to MIT, check for accepted domains corrected
     
     TODO
-    - add a descriptive test result (?)
-	- add an additional parameter AcceptOnlyEnglishLetters
-	- add an additional parameter AllowedCharsExclusionList
+    - add an additional parameter AcceptOnlyEnglishLetters
+    - add an additional parameter AllowedCharsExclusionList
     
     LICENSE
-    Copyright (C) 2015 Wojciech Sciesinski
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-    GNU General Public License for more details.
-    You should have received a copy of the GNU General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>
+	Copyright (c) 2016 Wojciech Sciesinski
+    This function is licensed under The MIT License (MIT)
+    Full license text: https://opensource.org/licenses/MIT
     
     .OUTPUTS
     System.Object[]
@@ -164,7 +156,7 @@
 #>  
     
     [cmdletbinding()]
-	[OutputType([System.Object[]])]
+    [OutputType([System.Object[]])]
     param (
         
         [parameter(ValueFromPipeline = $true, mandatory = $true)]
@@ -279,12 +271,12 @@
                 
                 #If a function is not runned in EMS email address will be parsed using regex
                 Catch {
-				
-					#Warning that EMS is not used to the function run
-					
-					$MessageText = "The function should be runned in Exchange Management Shell, some test will be skipped, email format will be checked in unrestrictive mode."
                 
-					Write-Warning -Message $MessageText
+                    #Warning that EMS is not used to the function run
+                    
+                    $MessageText = "The function should be runned in Exchange Management Shell, some test will be skipped, email format will be checked in unrestrictive mode."
+                
+                    Write-Warning -Message $MessageText
                     
                     #Check if space is in midle of email
                     $SpacePosition = $CurrentEmailAddress.IndexOf(' ')
@@ -335,7 +327,7 @@
             
             If ($TestAcceptedDomains -and $TestAcceptedDomainsCurrent) {
                 
-                If (($AcceptedDomains | Where-Object -FilterScript { $_ -eq $CurrentEmailDomain } | Measure-Object).count -eq 1) {
+                If (($AcceptedDomains | Where-Object -FilterScript { $_.DomainName -eq $CurrentEmailDomain } | Measure-Object).count -eq 1) {
                     
                     Write-Verbose -Message $CurrentEmailDomain
                     
@@ -387,12 +379,12 @@
                     $ExistingObjectAlias = $Recipient.alias
                     
                     $ExistingObjectType = $Recipient.RecipientType
-					
-					If ( $TestIsPrimary ) {
                     
-						$ExistingObjectEmailIsPrimary = ($Recipient.PrimarySMTPAddress -eq $CurrentEmailAddress)
-					
-					}
+                    If ( $TestIsPrimary ) {
+                    
+                        $ExistingObjectEmailIsPrimary = ($Recipient.PrimarySMTPAddress -eq $CurrentEmailAddress)
+                    
+                    }
                     
                     $ExistingObjectEmailAddressPolicyEnabled = $Recipient.EmailAddressPolicyEnabled
                     
