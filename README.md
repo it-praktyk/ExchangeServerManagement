@@ -87,9 +87,9 @@ VERSION HISTORY
 - 0.6.0 - 2015-12-22 - the function rewriten, information about license added
 - 0.7.0 - 2015-12-29 - validation extended and corrected
 - 0.8.0 - 2015-12-31 - the function tested, the parameter $AcceptedDomains implemented, help updated
+- 0.9.0 - 2016-05-12 - license changed to MIT, check for accepted domains corrected
 
 TODO
-- add a description of errors for the test TestEmailFormat results (?)
 - add an additional parameter AcceptOnlyEnglishLetters
 - add an additional parameter AllowedCharsExclusionList
 
