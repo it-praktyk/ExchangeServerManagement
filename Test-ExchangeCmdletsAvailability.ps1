@@ -2,10 +2,13 @@
     
 <#
     .SYNOPSIS
-    Function intended for veryfing if in current PowerShell session Exchange cmdlets and Exchange servers are available
+    Verify if the function is run in Exchange Management Shell and the session to Exchange server is established.
    
     .DESCRIPTION
     
+    Function to verify if the function is run in Exchange Management Shell by test the Function PSProvider content for selected cmdlet - default is Get-ExchangeServer. 
+    Additionally state of the session can be checked by invoking Get-ExchangeServer and checking amount of returned objects.
+        
     .PARAMETER CmdletForCheck
     Cmdlet which availability will be tested
     
@@ -13,8 +16,23 @@
     Try read list of available Exchange servers
   
     .EXAMPLE
+    [PS] > Test-ExchangeCmdletsAvailability -CmdletForCheck Get-Mailbox
     
-    Test-ExchangeCmdletsAvailability -CmdletForCheck Get-Mailbox
+    If the function is run in Exchange Management Shell.
+    
+    .EXAMPLE
+    [PS] >Test-ExchangeCmdletsAvailability
+    1
+
+    If the function is doesn't run in Exchange Management Shell.
+
+    .OUTPUTS
+    
+    The function return codes like below
+    
+    0 = everythink OK 
+    1 = cmdlets don't available
+    2 = cmdlets available but Exchange servers don't available in the session
      
     .LINK
     https://github.com/it-praktyk/Test-ExchangeCmdletsAvailability
@@ -24,75 +42,66 @@
           
     .NOTES
     AUTHOR: Wojciech Sciesinski, wojciech[at]sciesinski[dot]net
-    KEYWORDS: PowerShell,Exchange
+    KEYWORDS: PowerShell, Exchange
    
     VERSIONS HISTORY
-    0.1.0 - 2015-05-25 - Initial release
-    0.1.1 - 2015-05-25 - Variable renamed, help updated, simple error handling added
-    0.1.2 - 2015-07-06 - Corrected
-
-    TODO
+    - 0.1.0 - 2015-05-25 - Initial release
+    - 0.1.1 - 2015-05-25 - Variable renamed, help updated, simple error handling added
+    - 0.1.2 - 2015-07-06 - Corrected
+	- 0.2.0 - 2016-05-22 - The license changed to MIT, returned types extended
         
-    LICENSE
-    Copyright (C) 2015 Wojciech Sciesinski
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-    GNU General Public License for more details.
-    You should have received a copy of the GNU General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>
+	LICENSE
+	Copyright (c) 2016 Wojciech Sciesinski
+    This function is licensed under The MIT License (MIT)
+    Full license text: https://opensource.org/licenses/MIT
    
 #>
     
     
     [CmdletBinding()]
-    
     param (
         
         [parameter(mandatory = $false)]
         [String]$CmdletForCheck = "Get-ExchangeServer",
-        
         [parameter(Mandatory = $false)]
-        [Bool]$CheckExchangeServersAvailability = $false
-                
+        [Switch]$CheckExchangeServersAvailability
+        
     )
-    
-    BEGIN {
         
-        
-        
-        
-    }
-    
     PROCESS {
         
-        $CmdletAvailable= Test-Path -Path Function:$CmdletForCheck
+        $CmdletAvailable = Test-Path -Path Function:$CmdletForCheck
         
-        if ($CmdletAvailable -and $CheckExchangeServersAvailability) {
+        if ($CmdletAvailable -and ($CheckExchangeServersAvailability.IsPresent)) {
             
             Try {
                 
                 $ReturnedServers = Get-ExchangeServer
                 
-                $ReturnedServerCount = ($ReturnedServers | measure).Count
+                $ReturnedServerCount = ($ReturnedServers | Measure-Object).Count
                 
-                $Result = ($CmdletAvailable -and ($ReturnedServerCount -ge 1))
+                If ($CmdletAvailable -and ($ReturnedServerCount -ge 1)) {
+                    
+                    $ReturnCode = 0
+                    
+                }
+                
             }
-            
             Catch {
                 
-                $Result = $false
+                $ReturnCode = 2
                 
             }
             
         }
+        elseif ($CmdletAvailable) {
+            
+            $ReturnCode = 0
+            
+        }
         Else {
             
-            $Result = $CmdletAvailable
+            $ReturnCode = 1
             
         }
         
@@ -100,7 +109,7 @@
     
     END {
         
-        Return $Result
+        Return $ReturnCode
         
     }
     
