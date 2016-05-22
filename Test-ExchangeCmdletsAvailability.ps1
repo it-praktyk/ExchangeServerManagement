@@ -49,6 +49,7 @@
     - 0.1.1 - 2015-05-25 - Variable renamed, help updated, simple error handling added
     - 0.1.2 - 2015-07-06 - Corrected
 	- 0.2.0 - 2016-05-22 - The license changed to MIT, returned types extended
+    - 0.2.1 - 2016-05-22 - Workaround for pass Pester test added
         
 	LICENSE
 	Copyright (c) 2016 Wojciech Sciesinski
@@ -67,7 +68,13 @@
         [Switch]$CheckExchangeServersAvailability
         
     )
+    
+    BEGIN {
         
+        $ReturnCode = 2
+        
+    }
+    
     PROCESS {
         
         $CmdletAvailable = Test-Path -Path Function:$CmdletForCheck
