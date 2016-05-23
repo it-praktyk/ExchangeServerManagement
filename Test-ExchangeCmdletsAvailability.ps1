@@ -50,6 +50,7 @@
     - 0.1.2 - 2015-07-06 - Corrected
 	- 0.2.0 - 2016-05-22 - The license changed to MIT, returned types extended
     - 0.2.1 - 2016-05-22 - Workaround for pass Pester test added
+	- 0.2.2 - 2016-05-23 - Workaround from version 0.2.1 removed, Pester test corrected
         
 	LICENSE
 	Copyright (c) 2016 Wojciech Sciesinski
@@ -70,8 +71,6 @@
     )
     
     BEGIN {
-        
-        $ReturnCode = 2
         
     }
     

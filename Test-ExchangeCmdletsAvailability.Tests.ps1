@@ -36,7 +36,7 @@ Describe "Test-ExchangeCmdletsAvailability" {
         
         Mock -CommandName Test-Path -MockWith { Return $true }
         
-        Mock -CommandName Get-ExchangeServer -MockWith { Return $null }
+        Mock -CommandName Get-ExchangeServer -MockWith { Throw }
         
         It "Cmdlets available, CheckExchangeServersAvailability selected, Exchange Server don't available" {
             
