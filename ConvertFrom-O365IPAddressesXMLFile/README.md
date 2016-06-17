@@ -4,7 +4,7 @@ Convert the O365IPAddresses.xml file to the custom PowerShell object
 
 ## SYNTAX
 ```powershell
-ConvertFrom-O365IPAddressesXMLFile [[-Path] <Object>] [<CommonParameters>]
+ConvertFrom-O365IPAddressesXMLFile [[-Path] <String>] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -15,7 +15,7 @@ The list contains addresses (IPv4, IPv6, URL) for what communication can't be pr
 More information on the Microsoft support page: "Office 365 URLs and IP address ranges", http://bit.ly/1LD8fYv
 
 ## PARAMETERS
-### -Path &lt;Object&gt;
+### -Path &lt;String&gt;
 The xml file containing data like O365IPAddresses.xml downloaded manually.
 If the the parameter is ommited the file O365IPAddresses.xml will be downloaded from the Microsoft site and saved with
 ```
@@ -44,12 +44,12 @@ VERSIONS HISTORY
 - 0.1.2 - 2016-02-23 - The output spelling corrected for SubNetMaskLength, help update, the function reformatted
 - 0.1.3 - 2016-02-23 - Small correction of code in an example
 - 0.1.4 - 2016-02-24 - Dates for versions 0.1.1 - 0.1.3 corrected, alliases for some cmdlets expanded to full names
+- 0.2.0 - 2016-06-17 - Support for handling download errors added, help updated, the main repository renamed 
 
 TODO
 - add only summary mode/switch
 - add support for downloading the file via proxy with authentication
 - add parameter to custom naming downloaded file
-- handle errors of a download operation (?)
 - add whatif (?)
 - check/correct verbose and debug mode
 

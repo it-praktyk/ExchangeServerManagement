@@ -1,8 +1,8 @@
 ﻿function ConvertFrom-O365IPAddressesXMLFile {
-
+    
     <#
     .SYNOPSIS
-    Convert the O365IPAddresses.xml file to the custom PowerShell object
+    Download and convert the O365IPAddresses.xml file to the custom PowerShell object.
     
     .DESCRIPTION
     Function intended for converting to the custom PowerShell object the list of hosts used for Office 365 services published as the O365IPAddresses.xml file.
@@ -73,7 +73,7 @@
     
      
     .LINK
-    https://github.com/it-praktyk/ConvertFrom-O365IPAddressesXMLFile
+    https://github.com/it-praktyk/Convert-Office365NetworksData
     
     .LINK
     https://www.linkedin.com/in/sciesinskiwojciech
@@ -88,6 +88,7 @@
     - 0.1.2 - 2016-02-23 - The output spelling corrected for SubNetMaskLength, help update, the function reformatted
     - 0.1.3 - 2016-02-23 - Small correction of code in an example
     - 0.1.4 - 2016-02-24 - Dates for versions 0.1.1 - 0.1.3 corrected, alliases for some cmdlets expanded to full names
+	- 0.2.0 - 2016-06-17 - Support for handling download errors added, help updated, the main repository renamed 
 
     TODO
     - add only summary mode/switch
@@ -107,38 +108,51 @@
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false)]
-        #[System.IO.File]
-        $Path = ".\O365IPAddresses.xml"
+        [String]$Path = ".\O365IPAddresses.xml"
     )
     
     BEGIN {
         
-        If (!(Test-Path -Path $Path -Type Leaf)) {
+        Try {
             
-            # If not provided file than download file from the internet
+            If (!(Test-Path -Path $Path -Type Leaf)) {
+                
+                # If not provided file then download file from the internet
+                
+                [String]$UrlToDownload = "https://support.content.office.net/en-us/static/O365IPAddresses.xml"
+                
+                [String]$OutputFileName = "O365IPAddresses-{0}.xml" -f (Get-Date -f "yyyyMMdd-HHmmss")
+                
+                Invoke-WebRequest -uri $UrlToDownload -OutFile ".\$OutputFileName"
+                
+                [XML]$CurrentO365AddressesFile = Get-Content -Path ".\$OutputFileName"
+                
+                [String]$MessageText = "The data from {0} content downloaded and stored as a file {1}." -f $UrlToDownload, $OutputFileName
+                
+                Write-Verbose -Message $MessageText
+                
+            }
+            Else {
+                
+                [XML]$CurrentO365AddressesFile = Get-Content -Path $Path
+                
+            }
             
-            [String]$OutputFileName = "O365IPAddresses-{0}.xml" -f (Get-Date -f "yyyyMMdd-HHmmss")
-            
-            Invoke-WebRequest -uri "https://support.content.office.net/en-us/static/O365IPAddresses.xml" -OutFile ".\$OutputFileName" -verbose
-            
-            [XML]$CurrentO365AddressesFile = Get-Content -Path ".\$OutputFileName"
+            $Results = @()
             
         }
-        Else {
+        Catch {
             
-            [XML]$CurrentO365AddressesFile = Get-Content -Path $Path
+            Throw $error[0]
             
         }
-        
-        $Results = @()
-        
     }
     
     PROCESS {
         
         $O365Services = $CurrentO365AddressesFile.products.product
         
-        $O365ServicesCount = $(($O365Services | Measure-Object ).Count)
+        $O365ServicesCount = $(($O365Services | Measure-Object).Count)
         
         [String]$MessageText = "{0} products found in the xml file {1}" -f $O365ServicesCount, $Path
         
@@ -152,7 +166,7 @@
             
             $CurrentAddressList = $O365Services[$i] | Select-Object -ExpandProperty addresslist
             
-            $CurrentListCount = ($CurrentAddressList | Measure-Object ).count
+            $CurrentListCount = ($CurrentAddressList | Measure-Object).count
             
             [String]$MessageText = "Start processing for {0}, {1} addressess lists found" -f $CurrentServiceName, $CurrentListCount
             
@@ -272,7 +286,7 @@
                 }
                 
             }
-           
+            
         }
         
         Remove-Variable CurrentListCount
@@ -308,7 +322,7 @@ function ConvertTo-Mask {
     255.255.254.0
      
     .LINK
-    https://github.com/it-praktyk/ConvertFrom-O365IPAddressesXMLFile
+    https://github.com/it-praktyk/Convert-Office365NetworksData
     
     .LINK
     https://www.linkedin.com/in/sciesinskiwojciech
@@ -344,14 +358,14 @@ function ConvertTo-Mask {
     
     If ($FullOctetsCounts -eq 4) {
         
-        Return $FullOctetsText.Substring(0,15)
+        Return $FullOctetsText.Substring(0, 15)
         
     }
     Else {
         
         [Int]$MiddleBites = $($MaskLength - ($FullOctetsCounts * 8))
         
-        switch ( $MiddleBites) {
+        switch ($MiddleBites) {
             
             0 { [String]$MiddleOctetString = "0" }
             1 { [String]$MiddleOctetString = "128" }
