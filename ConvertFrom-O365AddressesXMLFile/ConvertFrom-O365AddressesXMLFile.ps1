@@ -1,4 +1,4 @@
-﻿function ConvertFrom-O365IPAddressesXMLFile {
+﻿function ConvertFrom-O365AddressesXMLFile {
     
     <#
     .SYNOPSIS
@@ -22,7 +22,7 @@
     The custom PowerShell object what contains properties: Service,Type,IPAddress,SubNetMaskLength,SubnetMask,Url
   
     .EXAMPLE
-    ConvertFrom-O365IPAddressesXMLFile
+    ConvertFrom-O365AddressesXMLFile
     
     Service          : o365
     Type             : IPv6
@@ -54,7 +54,7 @@
     
     .EXAMPLE
     
-    [PS] > ConvertFrom-O365IPAddressesXMLFile -Path .\O365IPAddresses.xml | get-member
+    [PS] > ConvertFrom-O365AddressesXMLFile -Path .\O365IPAddresses.xml | get-member
 
     TypeName: System.Management.Automation.PSCustomObject
 
@@ -88,7 +88,8 @@
     - 0.1.2 - 2016-02-23 - The output spelling corrected for SubNetMaskLength, help update, the function reformatted
     - 0.1.3 - 2016-02-23 - Small correction of code in an example
     - 0.1.4 - 2016-02-24 - Dates for versions 0.1.1 - 0.1.3 corrected, alliases for some cmdlets expanded to full names
-	- 0.2.0 - 2016-06-17 - Support for handling download errors added, help updated, the main repository renamed 
+	- 0.2.0 - 2016-06-17 - Support for handling download errors added, help updated, the main repository renamed
+    - 0.3.0 - 2016-06-17 - The function name changed from ConvertFrom-O365IPAddressesXMLFile to ConvertFrom-O365AddressesXMLFile
 
     TODO
     - add only summary mode/switch
