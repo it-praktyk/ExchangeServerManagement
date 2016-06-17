@@ -234,7 +234,8 @@
 		
 		ForEach ($CurrentItem in $RSSItem.Item) {
 			
-			if ($i -gt 197 -and $i -lt 203) {
+			#This can be used to limit parse operation under development
+			#if ($i -gt 197 -and $i -lt 203) {
 				
 				#Prepoulating properties for the Result object
 				
@@ -286,7 +287,7 @@
 			
 			$i++
 			
-		}
+		#}
 		
 	}
 	
