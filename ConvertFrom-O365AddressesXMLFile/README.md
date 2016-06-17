@@ -1,10 +1,10 @@
-# ConvertFrom-O365IPAddressesXMLFile
+# ConvertFrom-O365AddressesXMLFile
 ## SYNOPSIS
 Convert the O365IPAddresses.xml file to the custom PowerShell object
 
 ## SYNTAX
 ```powershell
-ConvertFrom-O365IPAddressesXMLFile [[-Path] <String>] [<CommonParameters>]
+ConvertFrom-O365AddressesXMLFile [[-Path] <String>] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -35,7 +35,6 @@ The custom PowerShell object what contains properties: Service,Type,IPAddress,Su
 ## NOTES
 AUTHOR: Wojciech Sciesinski, wojciech[at]sciesinski[dot]net  
 
-
 KEYWORDS: PowerShell, Exchange, Office 365, O365, XML, proxy
 
 VERSIONS HISTORY
@@ -45,6 +44,7 @@ VERSIONS HISTORY
 - 0.1.3 - 2016-02-23 - Small correction of code in an example
 - 0.1.4 - 2016-02-24 - Dates for versions 0.1.1 - 0.1.3 corrected, alliases for some cmdlets expanded to full names
 - 0.2.0 - 2016-06-17 - Support for handling download errors added, help updated, the main repository renamed 
+- 0.3.0 - 2016-06-17 - The function name changed from ConvertFrom-O365IPAddressesXMLFile to ConvertFrom-O365AddressesXMLFile
 
 TODO
 - add only summary mode/switch
@@ -62,7 +62,7 @@ Full license text: https://opensource.org/licenses/MIT
 ## EXAMPLES
 ### EXAMPLE 1
 ```powershell
-[PS] >ConvertFrom-O365IPAddressesXMLFile
+[PS] >ConvertFrom-O365AddressesXMLFile
 
 Service          : o365
 Type             : IPv6
@@ -98,7 +98,7 @@ Url              : go.microsoft.com
 ```powershell
 .EXAMPLE
 
-[PS] >ConvertFrom-O365IPAddressesXMLFile -Path .\O365IPAddresses.xml | Get-Member
+[PS] >ConvertFrom-O365AddressesXMLFile -Path .\O365IPAddresses.xml | Get-Member
 
 TypeName: System.Management.Automation.PSCustomObject
 
