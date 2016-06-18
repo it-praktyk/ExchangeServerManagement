@@ -1,6 +1,6 @@
 # ConvertFrom-O365AddressesXMLFile
 ## SYNOPSIS
-Convert the O365IPAddresses.xml file to the custom PowerShell object
+Download and convert the O365IPAddresses.xml file to the custom PowerShell object
 
 ## SYNTAX
 ```powershell
@@ -8,7 +8,7 @@ ConvertFrom-O365AddressesXMLFile [[-Path] <String>] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
-Function intended for converting to the custom PowerShell object the list of hosts used for Office 365 services published as the O365IPAddresses.xml file.
+Function intended for for downloading and converting - to the custom PowerShell object - the list of hosts used for Office 365 services published as the O365IPAddresses.xml file.
 
 The list contains addresses (IPv4, IPv6, URL) for what communication can't be proxied on customer/client side.
 
@@ -45,7 +45,8 @@ VERSIONS HISTORY
 - 0.1.4 - 2016-02-24 - Dates for versions 0.1.1 - 0.1.3 corrected, alliases for some cmdlets expanded to full names
 - 0.2.0 - 2016-06-17 - Support for handling download errors added, help updated, the main repository renamed 
 - 0.3.0 - 2016-06-17 - The function name changed from ConvertFrom-O365IPAddressesXMLFile to ConvertFrom-O365AddressesXMLFile
-- 0.3.1 - 2016-06-18 - The script reformatted, TODO updated
+- 0.3.1 - 2016-06-18 - The code reformatted, TODO updated
+- 0.3.2 - 2016-06-18 - Help updated
 
 TODO
 
