@@ -45,12 +45,14 @@ VERSIONS HISTORY
 - 0.1.4 - 2016-02-24 - Dates for versions 0.1.1 - 0.1.3 corrected, alliases for some cmdlets expanded to full names
 - 0.2.0 - 2016-06-17 - Support for handling download errors added, help updated, the main repository renamed 
 - 0.3.0 - 2016-06-17 - The function name changed from ConvertFrom-O365IPAddressesXMLFile to ConvertFrom-O365AddressesXMLFile
+- 0.3.1 - 2016-06-18 - The script reformatted, TODO updated
 
 TODO
-- add only summary mode/switch
-- add support for downloading the file via proxy with authentication
+
+- add only summary mode/switch - display info a last modification date, and sums IPs/URLs for products
+- add support for downloading the file via proxy with authentication (?)
 - add parameter to custom naming downloaded file
-- add whatif (?)
+- add parameter to clean downloaded file
 - check/correct verbose and debug mode
 
 LICENSE
