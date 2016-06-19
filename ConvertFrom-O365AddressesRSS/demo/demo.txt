@@ -1,0 +1,5 @@
+Import-Module .\ConvertFrom-O365AddressesRSS.ps1 -Force
+
+ConvertFrom-O365AddressesRSS
+
+ConvertFrom-O365AddressesRSS -Path .\demo\0.1.0\O365IPAddressesChanges-20160619-125723.xml -verbose | select-object Guid,PublicationDate,DescriptionIsParsable,OperationType,QuickDescription -ExpandProperty SubChanges
