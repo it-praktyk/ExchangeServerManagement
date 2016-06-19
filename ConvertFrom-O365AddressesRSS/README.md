@@ -37,6 +37,8 @@ KEYWORDS: PowerShell, Exchange, Office 365, O365, XML, proxy, RSS
 
 VERSIONS HISTORY  
 - 0.1.0 - 2016-06-17 - The first version published to GitHub
+- 0.1.1 - 2016-06-19 - A case when the parameter Path is used corrected, TODO updated
+- 0.1.2 - 2016-06-19 - Handling input file rewrote partially, help updated
 
 TODO  
 - implement parameters DownloadRSSOnly, CleanFileAfterParsing  

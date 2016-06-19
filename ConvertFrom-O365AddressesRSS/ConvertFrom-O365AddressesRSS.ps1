@@ -149,7 +149,8 @@
    
     VERSIONS HISTORY
     - 0.1.0 - 2016-06-17 - The first version published to GitHub
-    - 0.1.1 - 2016-06-19 - Case when the parameter Path is used corrected, TODO updated
+    - 0.1.1 - 2016-06-19 - A case when the parameter Path is used corrected, TODO updated
+	- 0.1.2 - 2016-06-19 - Handling input file rewrote partially, help updated
     
     TODO
     - implement handling cases like 
@@ -174,9 +175,7 @@
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false)]
-        #[System.IO.File]
-
-        $Path = ".\O365AddressesRSS.xml"#,
+        [String]$Path = ".\O365AddressesRSS.xml"#,
         #[Parameter(Mandatory = $false)]
         #[Switch]$DownloadRSSOnly, #Can be handled to output to null
         #[Parameter(Mandatory = $false)]
@@ -197,25 +196,30 @@
                 
                 [String]$UrlToDownload = "https://support.office.com/en-us/o365ip/rss"
                 
-                [String]$OutputFileName = "O365IPAddressesChanges-{0}.xml" -f (Get-Date -Format "yyyyMMdd-HHmmss")
+                [String]$OutputFileName = ".\O365IPAddressesChanges-{0}.xml" -f (Get-Date -Format "yyyyMMdd-HHmmss")
                 
                 Invoke-WebRequest -uri $UrlToDownload -OutFile ".\$OutputFileName" -Verbose:$InternalVerbose
                 
-                [XML]$CurrentO365AddressesChanges = Get-Content -Path ".\$OutputFileName"
-                
                 [String]$MessageText = "The RSS {0} content downloaded and stored as a file {1}" -f $UrlToDownload, $OutputFileName
+				
+				[String]$FileToProcess = $OutputFileName
                 
                 Write-Verbose -Message $MessageText
                 
             }
             Else {
+			
+				[String]$MessageText = "The file {0} found and will be processed" -f $Path
+				
+				Write-Verbose -Message $MessageText
                 
-                $OutputFileName = $Path
-                
-                [XML]$CurrentO365AddressesChanges = Get-Content -Path $Path
-                
+                $FileToProcess = $Path
+                                
             }
             
+			#Assigning RSS file content to variable
+			[XML]$CurrentO365AddressesChanges = Get-Content -Path $FileToProcess
+			
             $Results = New-Object System.Collections.ArrayList
             
         }
