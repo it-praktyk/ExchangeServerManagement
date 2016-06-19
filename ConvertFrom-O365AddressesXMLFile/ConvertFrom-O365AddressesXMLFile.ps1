@@ -15,11 +15,11 @@
     The xml file containing data like O365IPAddresses.xml downloaded manually. 
     If the the parameter is ommited the file O365IPAddresses.xml will be downloaded from the Microsoft site and saved with
     
-    .INPUT
-    The xml file published by Microsoft what contains the list of IP addresses ranges used by Office 365 addresses. 
+    .INPUTS
+    None. The xml file published by Microsoft what contains the list of IP addresses ranges used by Office 365 addresses. 
     
     .OUTPUTS
-    The custom PowerShell object what contains properties: Service,Type,IPAddress,SubNetMaskLength,SubnetMask,Url
+    None. The custom PowerShell object what contains properties: Service,Type,IPAddress,SubNetMaskLength,SubnetMask,Url
   
     .EXAMPLE
     ConvertFrom-O365AddressesXMLFile
@@ -91,6 +91,7 @@
     - 0.2.0 - 2016-06-17 - Support for handling download errors added, help updated, the main repository renamed
     - 0.3.0 - 2016-06-17 - The function name changed from ConvertFrom-O365IPAddressesXMLFile to ConvertFrom-O365AddressesXMLFile
 	- 0.3.1 - 2016-06-18 - The script reformatted, TODO updated
+	- 0.3.2 - 2016-06-19 - The help corrected
 
     TODO
     - add only summary mode/switch - display info a last modification date, and sums IPs/URLs for products
