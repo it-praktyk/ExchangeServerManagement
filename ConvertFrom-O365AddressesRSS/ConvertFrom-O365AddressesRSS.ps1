@@ -149,12 +149,19 @@
    
     VERSIONS HISTORY
     - 0.1.0 - 2016-06-17 - The first version published to GitHub
+    - 0.1.1 - 2016-06-19 - Case when the parameter Path is used corrected, TODO updated
     
     TODO
-	- implement parameters DownloadRSSOnly, CleanFileAfterParsing
+    - implement handling cases like 
+      - guid: afd6018e-f810-45df-b303-bfd5029fe710
+      - guid: 304bfc50-29fe-4700-bef9-205cfb403afd - probably trim need to be added
+      - guid: 06efa204-cfc4-402a-be60-18ef9105dfb3 - 'Updating' items
+      - guid: ef8105df-b303-4bfd-9029-fe7107efa204 - Notes only items
+    - implement parameters DownloadRSSOnly, CleanFileAfterParsing
     - add suport to return/parse RSS items between selected dates only
     - add support for downloading the file via proxy with authentication (?)
     - add parameter to custom naming downloaded file
+    - direct output for CSV files (?)
     
         
     LICENSE
@@ -163,327 +170,327 @@
     Full license text: https://opensource.org/licenses/MIT
    
 #>
-	
-	[cmdletbinding()]
-	param (
-		[Parameter(Mandatory = $false)]
-		#[System.IO.File]
+    
+    [cmdletbinding()]
+    param (
+        [Parameter(Mandatory = $false)]
+        #[System.IO.File]
 
-		$Path = ".\O365AddressesRSS.xml"#,
-		#[Parameter(Mandatory = $false)]
-		#[Switch]$DownloadRSSOnly,
-		#[Parameter(Mandatory = $false)]
-		#[Switch]$CleanFileAfterParsing 
-	)
-	
-	BEGIN {
-		
-		[Bool]$InternalVerbose = $false
-		
-		[Bool]$ParameterVerbose = ($PSCmdlet.MyInvocation.BoundParameters["Verbose"].IsPresent)
-		
-		Try {
-			
-			If (!(Test-Path -Path $Path -PathType Leaf)) {
-				
-				# If not provided file then download file from the internet
-				
-				[String]$UrlToDownload = "https://support.office.com/en-us/o365ip/rss"
-				
-				[String]$OutputFileName = "O365IPAddressesChanges-{0}.xml" -f (Get-Date -Format "yyyyMMdd-HHmmss")
-				
-				Invoke-WebRequest -uri $UrlToDownload -OutFile ".\$OutputFileName" -Verbose:$InternalVerbose
-				
-				[XML]$CurrentO365AddressesChanges = Get-Content -Path ".\$OutputFileName"
-				
-				[String]$MessageText = "The RSS {0} content downloaded and stored as a file {1}" -f $UrlToDownload, $OutputFileName
-				
-				Write-Verbose -Message $MessageText
-				
-			}
-			Else {
-				
-				$OutputFileName = $Path
-				
-				[XML]$CurrentO365AddressesChangesFile = Get-Content -Path $Path
-				
-			}
-			
-			$Results = New-Object System.Collections.ArrayList
-			
-		}
-		Catch {
-			
-			Throw $error[0]
-			
-		}
-		
-	}
-	
-	PROCESS {
-		
-		$RSSItem = $CurrentO365AddressesChanges.rss.channel
-		
-		$RSSItemCount = $(($RSSItem.Item | Measure-Object).Count)
-		
-		[String]$MessageText = "{0} RSS items found in the xml file {1}" -f $RSSItemCount, $OutputFileName
-		
-		Write-Verbose -Message $MessageText
-		
-		$i = 1
-		
-		ForEach ($CurrentItem in $RSSItem.Item) {
-			
-			#This can be used to limit parse operation under development
-			#if ($i -gt 197 -and $i -lt 203) {
-				
-				#Prepoulating properties for the Result object
-				
-				$Result = "" | Select-Object -Property OperationType, Title, PublicationDate, Guid, Description, DescriptionIsParsable, QuickDescription, Notes, SubChanges
-				
-				$CurrentItemGuid = $CurrentItem.guid
-				
-				$DescriptionParsable = $false
-				
-				$CurrentItemDescription = $($CurrentItem.Description).Replace("$([char][int]10)", " ")
-				
-				$ParsedDescription = Parse-O365IPAddressChangesDescription -Description $CurrentItemDescription -Guid $CurrentItemGuid -Verbose:$ParameterVerbose
-				
-				[datetime]$CurrentItemPubDate = $CurrentItem.pubDate
-				
-				$CurrentItemTitle = $($($CurrentItem.Title).trim()).Replace("$([char][int]10)", " ")
-				
-				$Result.Title = $CurrentItemTitle
-				
-				$Result.PublicationDate = $CurrentItemPubDate
-				
-				$Result.Guid = $CurrentItemGuid
-				
-				$Result.Description = $CurrentItemDescription
-			
-			If ($ParsedDescription.DescriptionIsParsable) {
-				
-				$Result.OperationType = $ParsedDescription.OperationType
-				
-				$Result.DescriptionIsParsable = $ParsedDescription.DescriptionIsParsable
-				
-				$Result.QuickDescription = $ParsedDescription.QuickChangeDescription
-				
-				$Result.Notes = $ParsedDescription.Notes
-				
-				$Result.SubChanges = $ParsedDescription.SubChanges
-				
-			}
-			Else {
-				
-				$Result.DescriptionIsParsable = $ParsedDescription.DescriptionIsParsable
-				
-			}
-			
-			
-				$Results.Add($Result) | Out-Null
-				
-			}
-			
-			$i++
-			
-		#}
-		
-	}
-	
-	END {
-		
-		Return $Results
-		
-	}
-	
+        $Path = ".\O365AddressesRSS.xml"#,
+        #[Parameter(Mandatory = $false)]
+        #[Switch]$DownloadRSSOnly, #Can be handled to output to null
+        #[Parameter(Mandatory = $false)]
+        #[Switch]$CleanFileAfterParsing 
+    )
+    
+    BEGIN {
+        
+        [Bool]$InternalVerbose = $false
+        
+        [Bool]$ParameterVerbose = ($PSCmdlet.MyInvocation.BoundParameters["Verbose"].IsPresent)
+        
+        Try {
+            
+            If (!(Test-Path -Path $Path -PathType Leaf)) {
+                
+                # If not provided file then download file from the internet
+                
+                [String]$UrlToDownload = "https://support.office.com/en-us/o365ip/rss"
+                
+                [String]$OutputFileName = "O365IPAddressesChanges-{0}.xml" -f (Get-Date -Format "yyyyMMdd-HHmmss")
+                
+                Invoke-WebRequest -uri $UrlToDownload -OutFile ".\$OutputFileName" -Verbose:$InternalVerbose
+                
+                [XML]$CurrentO365AddressesChanges = Get-Content -Path ".\$OutputFileName"
+                
+                [String]$MessageText = "The RSS {0} content downloaded and stored as a file {1}" -f $UrlToDownload, $OutputFileName
+                
+                Write-Verbose -Message $MessageText
+                
+            }
+            Else {
+                
+                $OutputFileName = $Path
+                
+                [XML]$CurrentO365AddressesChanges = Get-Content -Path $Path
+                
+            }
+            
+            $Results = New-Object System.Collections.ArrayList
+            
+        }
+        Catch {
+            
+            Throw $error[0]
+            
+        }
+        
+    }
+    
+    PROCESS {
+        
+        $RSSItem = $CurrentO365AddressesChanges.rss.channel
+        
+        $RSSItemCount = $(($RSSItem.Item | Measure-Object).Count)
+        
+        [String]$MessageText = "{0} RSS items found in the xml file {1}" -f $RSSItemCount, $OutputFileName
+        
+        Write-Verbose -Message $MessageText
+        
+        $i = 1
+        
+        ForEach ($CurrentItem in $RSSItem.Item) {
+            
+            #This can be used to limit parse operation under development
+            #if ($i -gt 197 -and $i -lt 203) {
+                
+                #Prepoulating properties for the Result object
+                
+                $Result = "" | Select-Object -Property OperationType, Title, PublicationDate, Guid, Description, DescriptionIsParsable, QuickDescription, Notes, SubChanges
+                
+                $CurrentItemGuid = $CurrentItem.guid
+                
+                $DescriptionParsable = $false
+                
+                $CurrentItemDescription = $($CurrentItem.Description).Replace("$([char][int]10)", " ")
+                
+                $ParsedDescription = Parse-O365IPAddressChangesDescription -Description $CurrentItemDescription -Guid $CurrentItemGuid -Verbose:$ParameterVerbose
+                
+                [datetime]$CurrentItemPubDate = $CurrentItem.pubDate
+                
+                $CurrentItemTitle = $($($CurrentItem.Title).trim()).Replace("$([char][int]10)", " ")
+                
+                $Result.Title = $CurrentItemTitle
+                
+                $Result.PublicationDate = $CurrentItemPubDate
+                
+                $Result.Guid = $CurrentItemGuid
+                
+                $Result.Description = $CurrentItemDescription
+            
+            If ($ParsedDescription.DescriptionIsParsable) {
+                
+                $Result.OperationType = $ParsedDescription.OperationType
+                
+                $Result.DescriptionIsParsable = $ParsedDescription.DescriptionIsParsable
+                
+                $Result.QuickDescription = $ParsedDescription.QuickChangeDescription
+                
+                $Result.Notes = $ParsedDescription.Notes
+                
+                $Result.SubChanges = $ParsedDescription.SubChanges
+                
+            }
+            Else {
+                
+                $Result.DescriptionIsParsable = $ParsedDescription.DescriptionIsParsable
+                
+            }
+            
+            
+                $Results.Add($Result) | Out-Null
+                
+            }
+            
+            $i++
+            
+        #}
+        
+    }
+    
+    END {
+        
+        Return $Results
+        
+    }
+    
 }
 
 Function Parse-O365IPAddressChangesDescription {
-	
-	[cmdletbinding()]
-	param (
-		
-		[parameter(Mandatory = $true)]
-		[String]$Description,
-		[parameter(Mandatory = $true)]
-		[String]$Guid
-		
-	)
-	
-	begin {
-		
-		$DescriptionIsParsable = $false
-		
-	}
-	
-	Process {
-		
-		Try {
-			
-			$DescriptionSplittedParts = $Description.Split(';')
-			
-			$DescriptionSplittedPartsCount = ($DescriptionSplittedParts | Measure-Object).Count
-			
-			#Add something to catch the semicolons in a Notes part like in 8ef9105d-fb30-43bf-9502-9fe7106efa20
-			
-			#Replace end of the line chars
-			$QuickDescription = $($DescriptionSplittedParts[0]).Replace("$([char][int]10)", " ")
-			
-			$QuickDescriptionPart0 = $($QuickDescription.Split(' '))[0]
-			
-			[String]$MessageText = "QuickDescription separated from the Description field: {0}" -f $QuickDescription
-			
-			Write-Verbose -Message $MessageText
-			
-			
-			If (@("Adding", "Removing") -contains $QuickDescriptionPart0) {
-				
-				
-				[String]$MessageText = "Recognized operations in the RSS item {0} is {1} - means Adding or Removing. Description will be parsed to extract SubChanges." -f $Guid, $QuickDescriptionPart0
-				
-				Write-Verbose -Message $MessageText
-				
-				$Operations = $($($($($Description.Split(';'))[1]).trim()).Replace("$([char][int]10)", " ")).Split(',')
-				
-				$OperationsCount = ($Operations | Measure-Object).Count
-				
-				For ($i = 0; $i -lt $OperationsCount; $i++) {
-					
-					$CurrentOperation = $($Operations[$i]).Trim()
-					
-					[String]$MessageText = "Parsing subchange: {0}" -f $CurrentOperation
-					
-					Write-Verbose -Message $MessageText
-					
-					If ($i -eq $OperationsCount - 1 -and $CurrentOperation -match 'Notes:') {
-						
-						#Try find Notes
-						
-						$RawNotes = $CurrentOperation.Split(']')[1]
-						
-						$Notes = $RawNotes.Substring(9, $RawNotes.length - 9)
-						
-					}
-					
-					$OpenBracket = $CurrentOperation.IndexOf('[')
-					
-					$CloseBracket = $CurrentOperation.IndexOf(']')
-					
-					If ($OpenBracket -eq -1 -or $CloseBracket -eq -1) {
-						
-						Break
-						
-					}
-					Else {
-						
-						$SubResults = New-Object System.Collections.ArrayList
-						
-						#Clean data from data outside brackets
-						$CurrentOperation = $CurrentOperation.Substring($OpenBracket + 1, ($CloseBracket - $OpenBracket) - 1)
-						
-						#Split data to fields
-						$CurrentOperationSplited = $CurrentOperation.Split('.')
-						
-						[DateTime]$EffectiveDate = Get-Date -Date $($($CurrentOperationSplited[0]).Trim()).Replace('Effective ', '') -Format 'M/d/yyyy'
-						
-						$Required = $($($CurrentOperationSplited[1]).Trim()).Replace('Required: ', '')
-						
-						If ($(($CurrentOperationSplited[2]).Trim()).Replace('ExpressRoute: ', '') -eq 'Yes') {
-							
-							$ExpressRoute = $true
-							
-						}
-						Else {
-							
-							$ExpressRoute = $false
-							
-						}
-						
-						$LastSpaceIndex = $CurrentOperation.LastIndexOf(' ')
-						
-						$Value = $($CurrentOperation.Substring($LastSpaceIndex + 1, $($CurrentOperation.length - $LastSpaceIndex) - 1)).Trim()
-						
-						$SubResult = New-Object -TypeName System.Management.Automation.PSObject
-						
-						$SubResult | Add-Member -MemberType NoteProperty -Name EffectiveDate -Value $EffectiveDate
-						
-						$SubResult | Add-Member -MemberType NoteProperty -Name Required -Value $Required
-						
-						$SubResult | Add-Member -MemberType NoteProperty -Name ExpressRoute -Value $ExpressRoute
-						
-						$SubResult | Add-Member -MemberType NoteProperty -Name Value -Value $Value
-						
-						$DescriptionIsParsable = $true
-						
-						$SubResults.Add($SubResult) | Out-Null
-						
-						If ($DescriptionIsParsable) {
-							
-							[String]$MessageText = "Subchange {0} from RSS item {1} parsed successfully to: {2}" -f $i, $Guid, $SubResult
-							
-						}
-						Else {
-							
-							[String]$MessageText = "Subchange {0} from RSS item {1} not parsed successfully" -f $i, $Guid
-							
-						}
-						
-						Write-Verbose -Message $MessageText
-						
-						Remove-Variable -Name SubResult | Out-Null
-						
-					}
-					
-				}
-				
-			}
-			
-		}
-		Catch {
-			
-			$DescriptionIsParsable = $false
-			
-		}
-		
-		Finally {
-			
-			If ($DescriptionIsParsable) {
-				
-				[String]$MessageText = "All subchanges from RSS item {0} have parsed successfully." -f $Guid
-				
-			}
-			Else {
-				
-				[String]$MessageText = "Subchange {0} from RSS item {1} not parsed successfully." -f $i, $Guid
-				
-			}
-			
-			Write-Verbose -Message $MessageText
-			
-			
-		}
-		
-	}
-	
-	
-	End {
-		
-		
-		$Result = New-Object -TypeName System.Management.Automation.PSObject
-		
-		$Result | Add-Member -MemberType NoteProperty -Name DescriptionIsParsable -Value $DescriptionIsParsable
-		
-		$Result | Add-Member -MemberType NoteProperty -Name QuickChangeDescription -Value $QuickDescription
-		
-		$Result | Add-Member -MemberType NoteProperty -Name OperationType -Value $QuickDescriptionPart0
-		
-		$Result | Add-Member -MemberType NoteProperty -Name Notes -Value $Notes
-		
-		$Result | Add-Member -MemberType NoteProperty -Name SubChanges -Value $SubResults
-		
-		Return $Result
-		
-	}
-	
+    
+    [cmdletbinding()]
+    param (
+        
+        [parameter(Mandatory = $true)]
+        [String]$Description,
+        [parameter(Mandatory = $true)]
+        [String]$Guid
+        
+    )
+    
+    begin {
+        
+        $DescriptionIsParsable = $false
+        
+    }
+    
+    Process {
+        
+        Try {
+            
+            $DescriptionSplittedParts = $Description.Split(';')
+            
+            $DescriptionSplittedPartsCount = ($DescriptionSplittedParts | Measure-Object).Count
+            
+            #Add something to catch the semicolons in a Notes part like in 8ef9105d-fb30-43bf-9502-9fe7106efa20
+            
+            #Replace end of the line chars
+            $QuickDescription = $($DescriptionSplittedParts[0]).Replace("$([char][int]10)", " ")
+            
+            $QuickDescriptionPart0 = $($QuickDescription.Split(' '))[0]
+            
+            [String]$MessageText = "QuickDescription separated from the Description field: {0}" -f $QuickDescription
+            
+            Write-Verbose -Message $MessageText
+            
+            
+            If (@("Adding", "Removing") -contains $QuickDescriptionPart0) {
+                
+                
+                [String]$MessageText = "Recognized operations in the RSS item {0} is {1} - means Adding or Removing. Description will be parsed to extract SubChanges." -f $Guid, $QuickDescriptionPart0
+                
+                Write-Verbose -Message $MessageText
+                
+                $Operations = $($($($($Description.Split(';'))[1]).trim()).Replace("$([char][int]10)", " ")).Split(',')
+                
+                $OperationsCount = ($Operations | Measure-Object).Count
+                
+                For ($i = 0; $i -lt $OperationsCount; $i++) {
+                    
+                    $CurrentOperation = $($Operations[$i]).Trim()
+                    
+                    [String]$MessageText = "Parsing subchange: {0}" -f $CurrentOperation
+                    
+                    Write-Verbose -Message $MessageText
+                    
+                    If ($i -eq $OperationsCount - 1 -and $CurrentOperation -match 'Notes:') {
+                        
+                        #Try find Notes
+                        
+                        $RawNotes = $CurrentOperation.Split(']')[1]
+                        
+                        $Notes = $RawNotes.Substring(9, $RawNotes.length - 9)
+                        
+                    }
+                    
+                    $OpenBracket = $CurrentOperation.IndexOf('[')
+                    
+                    $CloseBracket = $CurrentOperation.IndexOf(']')
+                    
+                    If ($OpenBracket -eq -1 -or $CloseBracket -eq -1) {
+                        
+                        Break
+                        
+                    }
+                    Else {
+                        
+                        $SubResults = New-Object System.Collections.ArrayList
+                        
+                        #Clean data from data outside brackets
+                        $CurrentOperation = $CurrentOperation.Substring($OpenBracket + 1, ($CloseBracket - $OpenBracket) - 1)
+                        
+                        #Split data to fields
+                        $CurrentOperationSplited = $CurrentOperation.Split('.')
+                        
+                        [DateTime]$EffectiveDate = Get-Date -Date $($($CurrentOperationSplited[0]).Trim()).Replace('Effective ', '') -Format 'M/d/yyyy'
+                        
+                        $Required = $($($CurrentOperationSplited[1]).Trim()).Replace('Required: ', '')
+                        
+                        If ($(($CurrentOperationSplited[2]).Trim()).Replace('ExpressRoute: ', '') -eq 'Yes') {
+                            
+                            $ExpressRoute = $true
+                            
+                        }
+                        Else {
+                            
+                            $ExpressRoute = $false
+                            
+                        }
+                        
+                        $LastSpaceIndex = $CurrentOperation.LastIndexOf(' ')
+                        
+                        $Value = $($CurrentOperation.Substring($LastSpaceIndex + 1, $($CurrentOperation.length - $LastSpaceIndex) - 1)).Trim()
+                        
+                        $SubResult = New-Object -TypeName System.Management.Automation.PSObject
+                        
+                        $SubResult | Add-Member -MemberType NoteProperty -Name EffectiveDate -Value $EffectiveDate
+                        
+                        $SubResult | Add-Member -MemberType NoteProperty -Name Required -Value $Required
+                        
+                        $SubResult | Add-Member -MemberType NoteProperty -Name ExpressRoute -Value $ExpressRoute
+                        
+                        $SubResult | Add-Member -MemberType NoteProperty -Name Value -Value $Value
+                        
+                        $DescriptionIsParsable = $true
+                        
+                        $SubResults.Add($SubResult) | Out-Null
+                        
+                        If ($DescriptionIsParsable) {
+                            
+                            [String]$MessageText = "Subchange {0} from RSS item {1} parsed successfully to: {2}" -f $i, $Guid, $SubResult
+                            
+                        }
+                        Else {
+                            
+                            [String]$MessageText = "Subchange {0} from RSS item {1} not parsed successfully" -f $i, $Guid
+                            
+                        }
+                        
+                        Write-Verbose -Message $MessageText
+                        
+                        Remove-Variable -Name SubResult | Out-Null
+                        
+                    }
+                    
+                }
+                
+            }
+            
+        }
+        Catch {
+            
+            $DescriptionIsParsable = $false
+            
+        }
+        
+        Finally {
+            
+            If ($DescriptionIsParsable) {
+                
+                [String]$MessageText = "All subchanges from RSS item {0} have parsed successfully." -f $Guid
+                
+            }
+            Else {
+                
+                [String]$MessageText = "Subchange {0} from RSS item {1} not parsed successfully." -f $i, $Guid
+                
+            }
+            
+            Write-Verbose -Message $MessageText
+            
+            
+        }
+        
+    }
+    
+    
+    End {
+        
+        
+        $Result = New-Object -TypeName System.Management.Automation.PSObject
+        
+        $Result | Add-Member -MemberType NoteProperty -Name DescriptionIsParsable -Value $DescriptionIsParsable
+        
+        $Result | Add-Member -MemberType NoteProperty -Name QuickChangeDescription -Value $QuickDescription
+        
+        $Result | Add-Member -MemberType NoteProperty -Name OperationType -Value $QuickDescriptionPart0
+        
+        $Result | Add-Member -MemberType NoteProperty -Name Notes -Value $Notes
+        
+        $Result | Add-Member -MemberType NoteProperty -Name SubChanges -Value $SubResults
+        
+        Return $Result
+        
+    }
+    
 }
