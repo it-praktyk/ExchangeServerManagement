@@ -178,12 +178,13 @@
     - 0.1.1 - 2016-06-19 - A case when the parameter Path is used corrected, TODO updated
 	- 0.1.2 - 2016-06-19 - Handling input file rewrote partially, help updated
     - 0.2.0 - 2016-06-21 - Support for Protocol,Port,Status means:Required/Optional added in SubChanges, help updated
+    - 0.2.1 - 2016-06-21 - Parsing description to SubChanges corrected
+    - 0.2.2 - 2016-06-21 - Parsing 'Updating' items added
+    - 0.2.3 - 2016-06-21 - Description will be trimmed at the begining of processing, TODO updated
     
     TODO
     - implement handling cases like 
-      - guid: afd6018e-f810-45df-b303-bfd5029fe710
-      - guid: 304bfc50-29fe-4700-bef9-205cfb403afd - probably trim need to be added
-      - guid: 06efa204-cfc4-402a-be60-18ef9105dfb3 - 'Updating' items
+      - guid: afd6018e-f810-45df-b303-bfd5029fe710 - colon except semicolon used to separate the first block
       - guid: ef8105df-b303-4bfd-9029-fe7107efa204 - Notes only items
     - implement parameters DownloadRSSOnly, CleanFileAfterParsing
     - add suport to return/parse RSS items between selected dates only
@@ -283,7 +284,7 @@
             
             $DescriptionParsable = $false
             
-            $CurrentItemDescription = $($CurrentItem.Description).Replace("$([char][int]10)", " ")
+            $CurrentItemDescription = $($($CurrentItem.Description).Replace("$([char][int]10)", " ")).Trim()
             
             $ParsedDescription = Parse-O365IPAddressChangesDescription -Description $CurrentItemDescription -Guid $CurrentItemGuid -Verbose:$ParameterVerbose
             
@@ -357,7 +358,11 @@ Function Parse-O365IPAddressChangesDescription {
     
     Process {
         
-        Try {
+        #Import-Module DebugPx -Force
+        
+        #Enter-Debugger -ConditionScript { $Guid -match '4bfc5029-fe70-407e-b920-5cfb403afd60' }
+        
+        #Try {
             
             $DescriptionSplittedParts = $Description.Split(';')
             
@@ -374,13 +379,11 @@ Function Parse-O365IPAddressChangesDescription {
             
             Write-Verbose -Message $MessageText
                         
-            If (@("Adding", "Removing") -contains $QuickDescriptionPart0) {                
+            If (@("Adding", "Removing","Updating") -contains $QuickDescriptionPart0) {                
                 
                 [String]$MessageText = "Recognized operations in the RSS item {0} is {1} - means Adding or Removing. Description will be parsed to extract SubChanges." -f $Guid, $QuickDescriptionPart0
                 
                 Write-Verbose -Message $MessageText
-                
-                $SubResult = "" | Select-Object -Property EffectiveDate, Status, SubService, ExpressRoute, Protocol, Port, Value
                 
                 $Operations = $($($($($Description.Split(';'))[1]).trim()).Replace("$([char][int]10)", " ")).Split(',')
                 
@@ -413,7 +416,9 @@ Function Parse-O365IPAddressChangesDescription {
                         Break
                         
                     }
-                    Else {
+                Else {
+                    
+                    $SubResult = "" | Select-Object -Property EffectiveDate, Status, SubService, ExpressRoute, Protocol, Port, Value
                         
                         $SubResults = New-Object System.Collections.ArrayList
                         
@@ -425,14 +430,14 @@ Function Parse-O365IPAddressChangesDescription {
                         
                         [DateTime]$EffectiveDate = Get-Date -Date $($($CurrentOperationSplited[0]).Trim()).Replace('Effective ', '') -Format 'M/d/yyyy'
                         
-                        If (($CurrentOperationSplited[1]).Trim() -match 'Required') {
+                        If ($CurrentOperationSplited[1] -match 'Required') {
                             
                             $Status = 'Required'
                             
                             $SubService = $($($CurrentOperationSplited[1]).Trim()).Replace('Required: ', '')
                             
                         }
-                        elseif (($CurrentOperationSplited[1]).Trim() -match 'Optional') {
+                        elseif ($CurrentOperationSplited[1] -match 'Optional') {
                             
                             $Status = 'Optional'
                             
@@ -451,14 +456,14 @@ Function Parse-O365IPAddressChangesDescription {
                             
                         }
                         
-                        If ($($CurrentOperationSplited[3]).Trim() -match 'TCP' -and $($CurrentOperationSplited[3]).Trim() -match 'UDP') {
+                        If ($CurrentOperationSplited[3] -match 'TCP' -and $CurrentOperationSplited[3] -match 'UDP') {
                             
                             $Protocol = 'TCP,UDP'
                             
                             
                         }
                         
-                        ElseIf ($($CurrentOperationSplited[3]).Trim() -match 'TCP') {
+                        ElseIf ($CurrentOperationSplited[3] -match 'TCP') {
                             
                             $Protocol = 'TCP'
                             
@@ -467,11 +472,11 @@ Function Parse-O365IPAddressChangesDescription {
                         }
                         
                         
-                        ElseIf ($($CurrentOperationSplited[3]).Trim() -match 'UDP') {
+                        ElseIf ($CurrentOperationSplited[3] -match 'UDP') {
                             
                             $Protocol = 'UDP'
                             
-                            $Port = $($($CurrentOperationSplited[3]).Trim()).Replace('Port: TCP ', '')
+                            $Port = $($($CurrentOperationSplited[3]).Trim()).Replace('Port: UDP ', '')
                             
                         }
                                                 
@@ -517,35 +522,38 @@ Function Parse-O365IPAddressChangesDescription {
                 }
                 
             }
-            
-        }
-        Catch {
-            
-            $DescriptionIsParsable = $false
-            
-        }
         
-        Finally {
-            
-            If ($DescriptionIsParsable) {
-                
-                [String]$MessageText = "All subchanges from RSS item {0} have parsed successfully." -f $Guid
-                
-            }
-            Else {
-                
-                [String]$MessageText = "Subchange {0} from RSS item {1} not parsed successfully." -f $i, $Guid
-                
-            }
-            
-            Write-Verbose -Message $MessageText            
-            
-        }
+    }
+    <#
+    Catch {
+        
+        $DescriptionIsParsable = $false
         
     }
     
+    Finally {
+        
+        If ($DescriptionIsParsable) {
+            
+            [String]$MessageText = "All subchanges from RSS item {0} have parsed successfully." -f $Guid
+            
+        }
+        Else {
+            
+            [String]$MessageText = "Subchange {0} from RSS item {1} not parsed successfully." -f $i, $Guid
+            
+        }
+        
+        Write-Verbose -Message $MessageText
+        
+    }
     
-    End {
+}
+    #>
+    
+
+
+End {
         
         
         $Result = New-Object -TypeName System.Management.Automation.PSObject

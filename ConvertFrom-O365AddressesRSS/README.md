@@ -39,7 +39,11 @@ VERSIONS HISTORY
 - 0.1.0 - 2016-06-17 - The first version published to GitHub
 - 0.1.1 - 2016-06-19 - A case when the parameter Path is used corrected, TODO updated
 - 0.1.2 - 2016-06-19 - Handling input file rewrote partially, help updated
-- 0.2.0 - 2016-06-21 - Support for Protocol,Port,Status means:Required/Optional added in SubChanges 
+- 0.2.0 - 2016-06-21 - Support for Protocol,Port,Status means:Required/Optional added in SubChanges, help updated
+- 0.2.1 - 2016-06-21 - Parsing description to SubChanges corrected
+- 0.2.2 - 2016-06-21 - Parsing 'Updating' items added
+- 0.2.3 - 2016-06-21 - Description will be trimmed at the begining of processing, TODO updated
+	
 
 TODO  
 - implement parameters DownloadRSSOnly, CleanFileAfterParsing  
