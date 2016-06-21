@@ -136,7 +136,33 @@
     <Output partially omitted>
     
     Automatically parsed RSS items with details about planned changes.
-     
+    
+    .EXAMPLE
+    
+    ConvertFrom-O365AddressesRSS | Select-Object -Property Guid -ExpandProperty SubChanges
+
+    <Output partially omitted>
+
+    EffectiveDate : 3/29/2016 12:00:00 AM
+    Status        : Required
+    SubService    : Exchange Online
+    ExpressRoute  : False
+    Protocol      : TCP
+    Port          : 443
+    Value         : 191.232.96.0/19
+    Guid          : 4bfc5029-fe70-407e-b920-5cfb403afd60
+
+    EffectiveDate : 2/29/2016 12:00:00 AM
+    Status        : Optional
+    SubService    : Microsoft Azure Active Directory (MFA)
+    ExpressRoute  : False
+    Protocol      : TCP
+    Port          : 443
+    Value         : secure.aadcdn.microsoftonline-p.com
+    Guid          : 105dfb30-3bfd-4502-9fe7-107efa204cfc
+    
+    <Output partially omitted>
+    
     .LINK
     https://github.com/it-praktyk/Convert-Office365NetworksData
     
@@ -151,6 +177,7 @@
     - 0.1.0 - 2016-06-17 - The first version published to GitHub
     - 0.1.1 - 2016-06-19 - A case when the parameter Path is used corrected, TODO updated
 	- 0.1.2 - 2016-06-19 - Handling input file rewrote partially, help updated
+    - 0.2.0 - 2016-06-21 - Support for Protocol,Port,Status means:Required/Optional added in SubChanges, help updated
     
     TODO
     - implement handling cases like 
@@ -175,7 +202,7 @@
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false)]
-        [String]$Path = ".\O365AddressesRSS.xml"#,
+        [String]$Path = ".\O365AddressesRSS.xml" #,
         #[Parameter(Mandatory = $false)]
         #[Switch]$DownloadRSSOnly, #Can be handled to output to null
         #[Parameter(Mandatory = $false)]
@@ -201,25 +228,25 @@
                 Invoke-WebRequest -uri $UrlToDownload -OutFile ".\$OutputFileName" -Verbose:$InternalVerbose
                 
                 [String]$MessageText = "The RSS {0} content downloaded and stored as a file {1}" -f $UrlToDownload, $OutputFileName
-				
-				[String]$FileToProcess = $OutputFileName
+                
+                [String]$FileToProcess = $OutputFileName
                 
                 Write-Verbose -Message $MessageText
                 
             }
             Else {
-			
-				[String]$MessageText = "The file {0} found and will be processed" -f $Path
-				
-				Write-Verbose -Message $MessageText
+                
+                [String]$MessageText = "The file {0} found and will be processed" -f $Path
+                
+                Write-Verbose -Message $MessageText
                 
                 $FileToProcess = $Path
-                                
+                
             }
             
-			#Assigning RSS file content to variable
-			[XML]$CurrentO365AddressesChanges = Get-Content -Path $FileToProcess
-			
+            #Assigning RSS file content to variable
+            [XML]$CurrentO365AddressesChanges = Get-Content -Path $FileToProcess
+            
             $Results = New-Object System.Collections.ArrayList
             
         }
@@ -247,30 +274,30 @@
             
             #This can be used to limit parse operation under development
             #if ($i -gt 197 -and $i -lt 203) {
-                
-                #Prepoulating properties for the Result object
-                
-                $Result = "" | Select-Object -Property OperationType, Title, PublicationDate, Guid, Description, DescriptionIsParsable, QuickDescription, Notes, SubChanges
-                
-                $CurrentItemGuid = $CurrentItem.guid
-                
-                $DescriptionParsable = $false
-                
-                $CurrentItemDescription = $($CurrentItem.Description).Replace("$([char][int]10)", " ")
-                
-                $ParsedDescription = Parse-O365IPAddressChangesDescription -Description $CurrentItemDescription -Guid $CurrentItemGuid -Verbose:$ParameterVerbose
-                
-                [datetime]$CurrentItemPubDate = $CurrentItem.pubDate
-                
-                $CurrentItemTitle = $($($CurrentItem.Title).trim()).Replace("$([char][int]10)", " ")
-                
-                $Result.Title = $CurrentItemTitle
-                
-                $Result.PublicationDate = $CurrentItemPubDate
-                
-                $Result.Guid = $CurrentItemGuid
-                
-                $Result.Description = $CurrentItemDescription
+            
+            #Prepoulating properties for the Result object
+            
+            $Result = "" | Select-Object -Property OperationType, Title, PublicationDate, Guid, Description, DescriptionIsParsable, QuickDescription, Notes, SubChanges
+            
+            $CurrentItemGuid = $CurrentItem.guid
+            
+            $DescriptionParsable = $false
+            
+            $CurrentItemDescription = $($CurrentItem.Description).Replace("$([char][int]10)", " ")
+            
+            $ParsedDescription = Parse-O365IPAddressChangesDescription -Description $CurrentItemDescription -Guid $CurrentItemGuid -Verbose:$ParameterVerbose
+            
+            [datetime]$CurrentItemPubDate = $CurrentItem.pubDate
+            
+            $CurrentItemTitle = $($($CurrentItem.Title).trim()).Replace("$([char][int]10)", " ")
+            
+            $Result.Title = $CurrentItemTitle
+            
+            $Result.PublicationDate = $CurrentItemPubDate
+            
+            $Result.Guid = $CurrentItemGuid
+            
+            $Result.Description = $CurrentItemDescription
             
             If ($ParsedDescription.DescriptionIsParsable) {
                 
@@ -292,12 +319,12 @@
             }
             
             
-                $Results.Add($Result) | Out-Null
-                
-            }
+            $Results.Add($Result) | Out-Null
             
-            $i++
-            
+        }
+        
+        $i++
+        
         #}
         
     }
@@ -346,14 +373,14 @@ Function Parse-O365IPAddressChangesDescription {
             [String]$MessageText = "QuickDescription separated from the Description field: {0}" -f $QuickDescription
             
             Write-Verbose -Message $MessageText
-            
-            
-            If (@("Adding", "Removing") -contains $QuickDescriptionPart0) {
-                
+                        
+            If (@("Adding", "Removing") -contains $QuickDescriptionPart0) {                
                 
                 [String]$MessageText = "Recognized operations in the RSS item {0} is {1} - means Adding or Removing. Description will be parsed to extract SubChanges." -f $Guid, $QuickDescriptionPart0
                 
                 Write-Verbose -Message $MessageText
+                
+                $SubResult = "" | Select-Object -Property EffectiveDate, Status, SubService, ExpressRoute, Protocol, Port, Value
                 
                 $Operations = $($($($($Description.Split(';'))[1]).trim()).Replace("$([char][int]10)", " ")).Split(',')
                 
@@ -398,7 +425,20 @@ Function Parse-O365IPAddressChangesDescription {
                         
                         [DateTime]$EffectiveDate = Get-Date -Date $($($CurrentOperationSplited[0]).Trim()).Replace('Effective ', '') -Format 'M/d/yyyy'
                         
-                        $Required = $($($CurrentOperationSplited[1]).Trim()).Replace('Required: ', '')
+                        If (($CurrentOperationSplited[1]).Trim() -match 'Required') {
+                            
+                            $Status = 'Required'
+                            
+                            $SubService = $($($CurrentOperationSplited[1]).Trim()).Replace('Required: ', '')
+                            
+                        }
+                        elseif (($CurrentOperationSplited[1]).Trim() -match 'Optional') {
+                            
+                            $Status = 'Optional'
+                            
+                            $SubService = $($($CurrentOperationSplited[1]).Trim()).Replace('Optional: ', '')
+                            
+                        }
                         
                         If ($(($CurrentOperationSplited[2]).Trim()).Replace('ExpressRoute: ', '') -eq 'Yes') {
                             
@@ -411,19 +451,47 @@ Function Parse-O365IPAddressChangesDescription {
                             
                         }
                         
+                        If ($($CurrentOperationSplited[3]).Trim() -match 'TCP' -and $($CurrentOperationSplited[3]).Trim() -match 'UDP') {
+                            
+                            $Protocol = 'TCP,UDP'
+                            
+                            
+                        }
+                        
+                        ElseIf ($($CurrentOperationSplited[3]).Trim() -match 'TCP') {
+                            
+                            $Protocol = 'TCP'
+                            
+                            $Port = $($($CurrentOperationSplited[3]).Trim()).Replace('Port: TCP ','')
+                            
+                        }
+                        
+                        
+                        ElseIf ($($CurrentOperationSplited[3]).Trim() -match 'UDP') {
+                            
+                            $Protocol = 'UDP'
+                            
+                            $Port = $($($CurrentOperationSplited[3]).Trim()).Replace('Port: TCP ', '')
+                            
+                        }
+                                                
                         $LastSpaceIndex = $CurrentOperation.LastIndexOf(' ')
                         
                         $Value = $($CurrentOperation.Substring($LastSpaceIndex + 1, $($CurrentOperation.length - $LastSpaceIndex) - 1)).Trim()
                         
-                        $SubResult = New-Object -TypeName System.Management.Automation.PSObject
+                        $SubResult.EffectiveDate = $EffectiveDate
                         
-                        $SubResult | Add-Member -MemberType NoteProperty -Name EffectiveDate -Value $EffectiveDate
+                        $SubResult.Status = $Status
                         
-                        $SubResult | Add-Member -MemberType NoteProperty -Name Required -Value $Required
+                        $SubResult.SubService = $SubService
                         
-                        $SubResult | Add-Member -MemberType NoteProperty -Name ExpressRoute -Value $ExpressRoute
+                        $SubResult.ExpressRoute = $ExpressRoute
                         
-                        $SubResult | Add-Member -MemberType NoteProperty -Name Value -Value $Value
+                        $SubResult.Protocol = $Protocol
+                        
+                        $SubResult.Port = $Port
+                        
+                        $SubResult.Value = $Value
                         
                         $DescriptionIsParsable = $true
                         
@@ -470,8 +538,7 @@ Function Parse-O365IPAddressChangesDescription {
                 
             }
             
-            Write-Verbose -Message $MessageText
-            
+            Write-Verbose -Message $MessageText            
             
         }
         

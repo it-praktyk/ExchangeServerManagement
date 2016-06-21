@@ -39,6 +39,7 @@ VERSIONS HISTORY
 - 0.1.0 - 2016-06-17 - The first version published to GitHub
 - 0.1.1 - 2016-06-19 - A case when the parameter Path is used corrected, TODO updated
 - 0.1.2 - 2016-06-19 - Handling input file rewrote partially, help updated
+- 0.2.0 - 2016-06-21 - Support for Protocol,Port,Status means:Required/Optional added in SubChanges 
 
 TODO  
 - implement parameters DownloadRSSOnly, CleanFileAfterParsing  
@@ -112,6 +113,35 @@ SubChanges            NoteProperty object SubChanges=null
 Title                 NoteProperty string Title=Office Online
 ```
 
+### EXAMPLE 3
+
+```powershell
+
+ConvertFrom-O365AddressesRSS | Select-Object -Property Guid -ExpandProperty SubChanges
+
+<Output partially omitted>
+
+EffectiveDate : 3/29/2016 12:00:00 AM
+Status        : Required
+SubService    : Exchange Online
+ExpressRoute  : False
+Protocol      : TCP
+Port          : 443
+Value         : 191.232.96.0/19
+Guid          : 4bfc5029-fe70-407e-b920-5cfb403afd60
+
+EffectiveDate : 2/29/2016 12:00:00 AM
+Status        : Optional
+SubService    : Microsoft Azure Active Directory (MFA)
+ExpressRoute  : False
+Protocol      : TCP
+Port          : 443
+Value         : secure.aadcdn.microsoftonline-p.com
+Guid          : 105dfb30-3bfd-4502-9fe7-107efa204cfc
+
+<Output partially omitted>
+
+```
  
 ### EXAMPLE 3
 ```powershell
