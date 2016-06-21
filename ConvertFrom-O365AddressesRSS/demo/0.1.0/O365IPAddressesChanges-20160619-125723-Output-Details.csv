@@ -1,4 +1,3 @@
-#TYPE Selected.System.Management.Automation.PSCustomObject
 "EffectiveDate","Required","ExpressRoute","Value","Guid","PublicationDate","DescriptionIsParsable","OperationType","QuickDescription"
 "2/5/2016 12:00:00 AM","Optional: Shared help and support","False","support.office.com","6018ef91-05df-4b30-bbfd-5029fe7107ef","2/8/2016 11:59:40 AM","True","Adding","Adding 8 New FQDNs"
 "2/5/2016 12:00:00 AM","Optional: DirSync and AADConnect","False","mscrl.microsoft.com","106efa20-4cfc-4402-afe6-018ef9105dfb","2/8/2016 11:59:40 AM","True","Adding","Adding 9 New FQDNs"

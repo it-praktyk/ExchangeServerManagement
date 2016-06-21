@@ -1,4 +1,3 @@
-#TYPE Selected.System.String
 "OperationType","Title","PublicationDate","Guid","Description","DescriptionIsParsable","QuickDescription","Notes","SubChanges"
 ,"Office Online","7/15/2014 7:00:00 AM","fa204cfc-402a-4fe6-818e-f9105dfb303b","If 134.170.0.0/16 has already been added from the Office 365 list, the Office Online IPs are already included. For reference purposes we have added the following for the non-Brazil based customers (134.170.27.64/26, 134.170.48.0/26, 134.170.65.64/26, 134.170.128.192/26, 134.170.170.64/26). We are also adding 191.232.2.64/26 for Brazil based customers.","False",,,
 ,"Office 365","7/22/2014 7:00:00 AM","3bfd5029-fe71-407e-b920-4cfc403afd60","Removed Azure IP Addresses - 65.52.208.73 & 65.52.240.233 as they are no longer used for Office 365 and should be removed from customer firewalls.","False",,,
