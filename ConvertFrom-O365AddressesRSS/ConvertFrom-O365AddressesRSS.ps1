@@ -190,10 +190,11 @@ function ConvertFrom-O365AddressesRSS {
     - 0.2.3 - 2016-06-21 - Description will be trimmed at the begining of processing, TODO updated
     - 0.3.0 - 2016-06-23 - Workarounds for inconsistent descriptions added, the parameters Start, End added to limit parse between dates
     - 0.4.0 - 2016-06-24 - Parsing notes only RSS items added, verbose corrected
+    - 0.4.1 - 2016-06-24 - Workarounds for inconsistent descriptions corrected
     
     TODO
-    - implement handling cases like 
-      - guid: ef8105df-b303-4bfd-9029-fe7107efa204 - Notes only items
+    - Add workaround for cases
+        -guid: 9205cfc4-03af-4d60-98ef-8106dfa304bf - more than one IP address in subchange, delimited by comma
     - implement parameters DownloadRSSOnly, CleanFileAfterParsing
     - add support for downloading the file via proxy with authentication (?)
     - add parameter to custom naming downloaded file
@@ -433,266 +434,278 @@ Function Parse-O365IPAddressChangesDescription {
         #Import-Module DebugPx -Force
         
         
-        #Try {
+        Try {
+            
+            If ($InfoOnly.IsPresent) {
+                
+                $SubResult = "" | Select-Object -Property EffectiveDate, Status, SubService, ExpressRoute, Protocol, Port, Value
+                
+                $SubResults = New-Object System.Collections.ArrayList
+                
+                $QuickDescription = 'Information - read description'
+                
+                $SubResult.Value = 'N/A'
+                
+                #Add Value to allow expand 'SubChanges' field
+                $SubResults.Add($SubResult) | Out-Null
+                
+                $DescriptionIsParsable = $true
+                
+                $QuickDescriptionPart0 = 'InfoONly'
+                
+                Remove-Variable -Name SubResult | Out-Null
+                
+                
+            }
+            
+            #Workaround for guid: afd6018e-f810-45df-b303-bfd5029fe710 - colon except semicolon used to separate the first block
+            #Replace the first colon
+            Else {
+                If ($Description.IndexOf(';') -eq -1 -and $Description.IndexOf(':') -ne -1 -and $Description.IndexOf(':') -le 25) {
+                    
+                    $ColonIndex = $Description.IndexOf(':')
+                    
+                    $Description = "{0};{1}" -f $Description.Substring(0, ($ColonIndex - 1)), $($Description.Substring($ColonIndex + 1, $($Description.Length - $ColonIndex) - 1))
+                    
+                }
+                
+                $DescriptionSplittedParts = $Description.Split(';')
+                
+                #Workaround for gudi: e6018ef9-105d-4fb3-83bf-d5029fe7106e 
+                #Join parts if was splitted due to a semicolon in the last field (probably in 'Notes')
+                if ($Description.IndexOf(';') -ne $Description.LastIndexOf(';')) {
+                    
+                    #Enter-
+                    
+                    $DescriptionSplittedParts[1] = "{0}; {1}" -f $DescriptionSplittedParts[1], $DescriptionSplittedParts[2]
+                    
+                }
+                
+                $DescriptionSplittedPartsCount = ($DescriptionSplittedParts | Measure-Object).Count
+                
+                #Replace end of the line chars
+                $QuickDescription = $($DescriptionSplittedParts[0]).Replace("$([char][int]10)", " ")
+                
+                $QuickDescriptionPart0 = $($QuickDescription.Split(' '))[0]
+                
+                [String]$MessageText = "QuickDescription separated from the Description field: {0}" -f $QuickDescription
+                
+                Write-Verbose -Message $MessageText
+                
+                If (@("Adding", "Removing", "Updating") -contains $QuickDescriptionPart0) {
+                    
+                    [String]$MessageText = "Recognized operations in the RSS item {0} is {1} - means Adding or Removing. Description will be parsed to extract SubChanges." -f $Guid, $QuickDescriptionPart0
+                    
+                    Write-Verbose -Message $MessageText
+                    
+                    #Split using ';', take the second field, replace 'a new line char' and the rest split using ','
+                    $Operations = $($($($($Description.Split(';'))[1]).trim()).Replace("$([char][int]10)", " ")).Split(',')
+                    
+                    $OperationsCount = ($Operations | Measure-Object).Count
+                    
+                    For ($i = 0; $i -lt $OperationsCount; $i++) {
+                        
+                        $CurrentOperation = $($Operations[$i]).Trim()
+                        
+                        [String]$MessageText = "Parsing subchange: {0}" -f $CurrentOperation
+                        
+                        Write-Verbose -Message $MessageText
+                        
+                        #Try find Notes
+                        If ($i -eq $OperationsCount - 1 -and $CurrentOperation -match 'Notes:') {
+                            
+                            
+                            #Workaround for 7efa204c-fc40-42af-9601-8ef8105dfb30 - to avoid display errors
+                            If ($CurrentOperation -match ']') {
+                                
+                                $RawNotes = $CurrentOperation.Split(']')[1]
+                                
+                            }
+                            Else {
+                                
+                                $RawNotes = $CurrentOperation
+                                
+                            }
+                            
+                            $Notes = $RawNotes.Substring(9, $RawNotes.length - 9)
+                            
+                        }
+                        
+                        $OpenBracket = $CurrentOperation.IndexOf('[')
+                        
+                        $CloseBracket = $CurrentOperation.IndexOf(']')
+                        
+                        If ($OpenBracket -eq -1 -or $CloseBracket -eq -1) {
+                            
+                            Break
+                            
+                        }
+                        Else {
+                            
+                            $SubResult = "" | Select-Object -Property EffectiveDate, Status, SubService, ExpressRoute, Protocol, Port, Value
+                            
+                            $SubResults = New-Object System.Collections.ArrayList
+                            
+                            #Clean data from data outside brackets
+                            $CurrentOperation = $CurrentOperation.Substring($OpenBracket + 1, ($CloseBracket - $OpenBracket) - 1)
+                            
+                            #Split data to fields
+                            $CurrentOperationSplited = $CurrentOperation.Split('.')
+                            
+                            [DateTime]$EffectiveDate = Get-Date -Date $($($CurrentOperationSplited[0]).Trim()).Replace('Effective ', '') -Format 'M/d/yyyy'
+                            
+                            If ($CurrentOperationSplited[1] -match 'Required') {
+                                
+                                $Status = 'Required'
+                                
+                                $SubService = $($($CurrentOperationSplited[1]).Trim()).Replace('Required: ', '')
+                                
+                            }
+                            elseif ($CurrentOperationSplited[1] -match 'Optional') {
+                                
+                                $Status = 'Optional'
+                                
+                                $SubService = $($($CurrentOperationSplited[1]).Trim()).Replace('Optional: ', '')
+                                
+                            }
+                            
+                            If ($(($CurrentOperationSplited[2]).Trim()).Replace('ExpressRoute: ', '') -eq 'Yes') {
+                                
+                                $ExpressRoute = $true
+                                
+                            }
+                            Else {
+                                
+                                $ExpressRoute = $false
+                                
+                            }
+                            
+                            If ($CurrentOperationSplited[3] -match 'TCP' -and $CurrentOperationSplited[3] -match 'UDP') {
+                                
+                                $Protocol = 'TCP,UDP'
+                                
+                                
+                            }
+                            
+                            ElseIf ($CurrentOperationSplited[3] -match 'TCP') {
+                                
+                                $Protocol = 'TCP'
+                                
+                                $Port = $($($CurrentOperationSplited[3]).Trim()).Replace('Port: TCP ', '')
+                                
+                            }
+                            
+                            
+                            ElseIf ($CurrentOperationSplited[3] -match 'UDP') {
+                                
+                                $Protocol = 'UDP'
+                                
+                                $Port = $($($CurrentOperationSplited[3]).Trim()).Replace('Port: UDP ', '')
+                                
+                            }
+                            
+                            $LastSpaceIndex = $CurrentOperation.LastIndexOf(' ')
+                            
+                            $Value = $($CurrentOperation.Substring($LastSpaceIndex + 1, $($CurrentOperation.length - $LastSpaceIndex) - 1)).Trim()
+                            
+                            $SubResult.EffectiveDate = $EffectiveDate
+                            
+                            $SubResult.Status = $Status
+                            
+                            $SubResult.SubService = $SubService
+                            
+                            $SubResult.ExpressRoute = $ExpressRoute
+                            
+                            $SubResult.Protocol = $Protocol
+                            
+                            $SubResult.Port = $Port
+                            
+                            $SubResult.Value = $Value
+                            
+                            $DescriptionIsParsable = $true
+                            
+                            $SubResults.Add($SubResult) | Out-Null
+                            
+                            If ($DescriptionIsParsable) {
+                                
+                                [String]$MessageText = "Subchange {0} from RSS item {1} parsed successfully to: {2}" -f $i, $Guid, $SubResult
+                                
+                            }
+                            Else {
+                                
+                                [String]$MessageText = "Subchange {0} from RSS item {1} not parsed successfully" -f $i, $Guid
+                                
+                            }
+                            
+                            Write-Verbose -Message $MessageText
+                            
+                            Remove-Variable -Name SubResult | Out-Null
+                            
+                        }
+                        
+                    }
+                    
+                }
+                
+                
+                
+                
+            }
+            
+        }
         
-        If ($InfoOnly.IsPresent) {
+        Catch {
             
             $SubResult = "" | Select-Object -Property EffectiveDate, Status, SubService, ExpressRoute, Protocol, Port, Value
             
             $SubResults = New-Object System.Collections.ArrayList
-            
-            $QuickDescription = 'Information - read description'
             
             $SubResult.Value = 'N/A'
             
             #Add Value to allow expand 'SubChanges' field
             $SubResults.Add($SubResult) | Out-Null
             
-            $DescriptionIsParsable = $true
-            
-            $QuickDescriptionPart0 = 'InfoONly'
+            $DescriptionIsParsable = $false
             
             Remove-Variable -Name SubResult | Out-Null
             
-            
         }
         
-        #Workaround for guid: afd6018e-f810-45df-b303-bfd5029fe710 - colon except semicolon used to separate the first block
-        #Replace the first colon
-        Else {
-            If ($Description.IndexOf(';') -eq -1) {
+        Finally {
+            
+            If ($DescriptionIsParsable) {
                 
-                $CommaIndex = $Description.IndexOf(',')
-                
-                $Description = "{0};{1}" -f $Description.Substring(0, ($CommaIndex - 1)), $($Description.Substring($CommaIndex + 1, $($Description.Length - $CommaIndex) - 1))
+                [String]$MessageText = "All subchanges from RSS item {0} have parsed successfully." -f $Guid
                 
             }
-            
-            $DescriptionSplittedParts = $Description.Split(';')
-            
-            #Workaround for gudi: e6018ef9-105d-4fb3-83bf-d5029fe7106e 
-            #Join parts if was splitted due to a semicolon in the last field (probably in 'Notes')
-            if ($Description.IndexOf(';') -ne $Description.LastIndexOf(';')) {
+            Else {
                 
-                #Enter-
-                
-                $DescriptionSplittedParts[1] = "{0}; {1}" -f $DescriptionSplittedParts[1], $DescriptionSplittedParts[2]
+                [String]$MessageText = "Subchange {0} from RSS item {1} haven't parsed successfully." -f $i, $Guid
                 
             }
-            
-            $DescriptionSplittedPartsCount = ($DescriptionSplittedParts | Measure-Object).Count
-            
-            #Replace end of the line chars
-            $QuickDescription = $($DescriptionSplittedParts[0]).Replace("$([char][int]10)", " ")
-            
-            $QuickDescriptionPart0 = $($QuickDescription.Split(' '))[0]
-            
-            [String]$MessageText = "QuickDescription separated from the Description field: {0}" -f $QuickDescription
             
             Write-Verbose -Message $MessageText
             
-            If (@("Adding", "Removing", "Updating") -contains $QuickDescriptionPart0) {
+        }
+        
+    }
+    
+    End {
                 
-                [String]$MessageText = "Recognized operations in the RSS item {0} is {1} - means Adding or Removing. Description will be parsed to extract SubChanges." -f $Guid, $QuickDescriptionPart0
+                $Result = New-Object -TypeName System.Management.Automation.PSObject
                 
-                Write-Verbose -Message $MessageText
+                $Result | Add-Member -MemberType NoteProperty -Name DescriptionIsParsable -Value $DescriptionIsParsable
                 
-                $Operations = $($($($($Description.Split(';'))[1]).trim()).Replace("$([char][int]10)", " ")).Split(',')
+                $Result | Add-Member -MemberType NoteProperty -Name QuickChangeDescription -Value $QuickDescription
                 
-                $OperationsCount = ($Operations | Measure-Object).Count
+                $Result | Add-Member -MemberType NoteProperty -Name OperationType -Value $QuickDescriptionPart0
                 
-                For ($i = 0; $i -lt $OperationsCount; $i++) {
-                    
-                    $CurrentOperation = $($Operations[$i]).Trim()
-                    
-                    [String]$MessageText = "Parsing subchange: {0}" -f $CurrentOperation
-                    
-                    Write-Verbose -Message $MessageText
-                    
-                    If ($i -eq $OperationsCount - 1 -and $CurrentOperation -match 'Notes:') {
-                        
-                        #Try find Notes
-                        
-                        $RawNotes = $CurrentOperation.Split(']')[1]
-                        
-                        $Notes = $RawNotes.Substring(9, $RawNotes.length - 9)
-                        
-                    }
-                    
-                    $OpenBracket = $CurrentOperation.IndexOf('[')
-                    
-                    $CloseBracket = $CurrentOperation.IndexOf(']')
-                    
-                    If ($OpenBracket -eq -1 -or $CloseBracket -eq -1) {
-                        
-                        Break
-                        
-                    }
-                    Else {
-                        
-                        $SubResult = "" | Select-Object -Property EffectiveDate, Status, SubService, ExpressRoute, Protocol, Port, Value
-                        
-                        $SubResults = New-Object System.Collections.ArrayList
-                        
-                        #Clean data from data outside brackets
-                        $CurrentOperation = $CurrentOperation.Substring($OpenBracket + 1, ($CloseBracket - $OpenBracket) - 1)
-                        
-                        #Split data to fields
-                        $CurrentOperationSplited = $CurrentOperation.Split('.')
-                        
-                        [DateTime]$EffectiveDate = Get-Date -Date $($($CurrentOperationSplited[0]).Trim()).Replace('Effective ', '') -Format 'M/d/yyyy'
-                        
-                        If ($CurrentOperationSplited[1] -match 'Required') {
-                            
-                            $Status = 'Required'
-                            
-                            $SubService = $($($CurrentOperationSplited[1]).Trim()).Replace('Required: ', '')
-                            
-                        }
-                        elseif ($CurrentOperationSplited[1] -match 'Optional') {
-                            
-                            $Status = 'Optional'
-                            
-                            $SubService = $($($CurrentOperationSplited[1]).Trim()).Replace('Optional: ', '')
-                            
-                        }
-                        
-                        If ($(($CurrentOperationSplited[2]).Trim()).Replace('ExpressRoute: ', '') -eq 'Yes') {
-                            
-                            $ExpressRoute = $true
-                            
-                        }
-                        Else {
-                            
-                            $ExpressRoute = $false
-                            
-                        }
-                        
-                        If ($CurrentOperationSplited[3] -match 'TCP' -and $CurrentOperationSplited[3] -match 'UDP') {
-                            
-                            $Protocol = 'TCP,UDP'
-                            
-                            
-                        }
-                        
-                        ElseIf ($CurrentOperationSplited[3] -match 'TCP') {
-                            
-                            $Protocol = 'TCP'
-                            
-                            $Port = $($($CurrentOperationSplited[3]).Trim()).Replace('Port: TCP ', '')
-                            
-                        }
-                        
-                        
-                        ElseIf ($CurrentOperationSplited[3] -match 'UDP') {
-                            
-                            $Protocol = 'UDP'
-                            
-                            $Port = $($($CurrentOperationSplited[3]).Trim()).Replace('Port: UDP ', '')
-                            
-                        }
-                        
-                        $LastSpaceIndex = $CurrentOperation.LastIndexOf(' ')
-                        
-                        $Value = $($CurrentOperation.Substring($LastSpaceIndex + 1, $($CurrentOperation.length - $LastSpaceIndex) - 1)).Trim()
-                        
-                        $SubResult.EffectiveDate = $EffectiveDate
-                        
-                        $SubResult.Status = $Status
-                        
-                        $SubResult.SubService = $SubService
-                        
-                        $SubResult.ExpressRoute = $ExpressRoute
-                        
-                        $SubResult.Protocol = $Protocol
-                        
-                        $SubResult.Port = $Port
-                        
-                        $SubResult.Value = $Value
-                        
-                        $DescriptionIsParsable = $true
-                        
-                        $SubResults.Add($SubResult) | Out-Null
-                        
-                        If ($DescriptionIsParsable) {
-                            
-                            [String]$MessageText = "Subchange {0} from RSS item {1} parsed successfully to: {2}" -f $i, $Guid, $SubResult
-                            
-                        }
-                        Else {
-                            
-                            [String]$MessageText = "Subchange {0} from RSS item {1} not parsed successfully" -f $i, $Guid
-                            
-                        }
-                        
-                        Write-Verbose -Message $MessageText
-                        
-                        Remove-Variable -Name SubResult | Out-Null
-                        
-                    }
-                    
-                }
+                $Result | Add-Member -MemberType NoteProperty -Name Notes -Value $Notes
+                
+                $Result | Add-Member -MemberType NoteProperty -Name SubChanges -Value $SubResults
+                
+                Return $Result
                 
             }
             
-            
-            
-        <#
-    }
-    
-    Catch {
-    
-        $SubResult.Value = 'N/A'
-    
-        #Add Value to allow expand 'SubChanges' field
-        $SubResults.Add($SubResult) | Out-Null
-        
-        $DescriptionIsParsable = $false
-    
-        Remove-Variable -Name SubResult | Out-Null
-        
-    }
-    
-    Finally {
-        
-        If ($DescriptionIsParsable) {
-            
-            [String]$MessageText = "All subchanges from RSS item {0} have parsed successfully." -f $Guid
-            
         }
-        Else {
-            
-            [String]$MessageText = "Subchange {0} from RSS item {1} haven't parsed successfully." -f $i, $Guid
-            
-        }
-        
-        Write-Verbose -Message $MessageText
-        
-    }
-    
-        #>
-            
-        }
-    }
-    
-    
-    
-    End {
-        
-        $Result = New-Object -TypeName System.Management.Automation.PSObject
-        
-        $Result | Add-Member -MemberType NoteProperty -Name DescriptionIsParsable -Value $DescriptionIsParsable
-        
-        $Result | Add-Member -MemberType NoteProperty -Name QuickChangeDescription -Value $QuickDescription
-        
-        $Result | Add-Member -MemberType NoteProperty -Name OperationType -Value $QuickDescriptionPart0
-        
-        $Result | Add-Member -MemberType NoteProperty -Name Notes -Value $Notes
-        
-        $Result | Add-Member -MemberType NoteProperty -Name SubChanges -Value $SubResults
-        
-        Return $Result
-        
-    }
-    
-}
