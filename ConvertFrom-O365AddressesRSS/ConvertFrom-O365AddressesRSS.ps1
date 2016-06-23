@@ -189,6 +189,7 @@ function ConvertFrom-O365AddressesRSS {
     - 0.2.2 - 2016-06-21 - Parsing 'Updating' items added
     - 0.2.3 - 2016-06-21 - Description will be trimmed at the begining of processing, TODO updated
     - 0.3.0 - 2016-06-23 - Workarounds for inconsistent descriptions added, the parameters Start, End added to limit parse between dates
+    - 0.4.0 - 2016-06-24 - Parsing notes only RSS items added, verbose corrected
     
     TODO
     - implement handling cases like 
@@ -210,7 +211,7 @@ function ConvertFrom-O365AddressesRSS {
     param (
         [Parameter(Mandatory = $false)]
         [String]$Path = ".\O365AddressesRSS.xml",
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [DateTime]$Start,
         [Parameter(Mandatory = $false)]
         [DateTime]$End
@@ -237,7 +238,7 @@ function ConvertFrom-O365AddressesRSS {
             $ParameterVerbose = $false
             
         }
-                
+        
         Try {
             
             If (!(Test-Path -Path $Path -PathType Leaf)) {
@@ -343,8 +344,17 @@ function ConvertFrom-O365AddressesRSS {
             
             $CurrentItemDescription = $($($CurrentItem.Description).Replace("$([char][int]10)", " ")).Trim()
             
-            $ParsedDescription = Parse-O365IPAddressChangesDescription -Description $CurrentItemDescription -Guid $CurrentItemGuid -Verbose:$ParameterVerbose
-                        
+            If ($CurrentItemDescription.Substring(0, 5) -eq 'Note:' -or $CurrentItemDescription.Substring(0, 6) -eq 'Notes:') {
+                
+                $ParsedDescription = Parse-O365IPAddressChangesDescription -Description $CurrentItemDescription -Guid $CurrentItemGuid -InfoOnly -Verbose:$ParameterVerbose
+                
+            }
+            Else {
+                
+                $ParsedDescription = Parse-O365IPAddressChangesDescription -Description $CurrentItemDescription -Guid $CurrentItemGuid -Verbose:$ParameterVerbose
+                
+            }
+            
             $CurrentItemTitle = $($($CurrentItem.Title).trim()).Replace("$([char][int]10)", " ")
             
             $Result.Title = $CurrentItemTitle
@@ -372,7 +382,10 @@ function ConvertFrom-O365AddressesRSS {
                 
                 $Result.DescriptionIsParsable = $ParsedDescription.DescriptionIsParsable
                 
+                $Result.SubChanges = $ParsedDescription.SubChanges
+                
             }
+            
             
             
             $Results.Add($Result) | Out-Null
@@ -403,7 +416,9 @@ Function Parse-O365IPAddressChangesDescription {
         [parameter(Mandatory = $true)]
         [String]$Description,
         [parameter(Mandatory = $true)]
-        [String]$Guid
+        [String]$Guid,
+        [parameter(Mandatory = $false)]
+        [switch]$InfoOnly
         
     )
     
@@ -417,32 +432,55 @@ Function Parse-O365IPAddressChangesDescription {
         
         #Import-Module DebugPx -Force
         
-                
+        
         #Try {
+        
+        If ($InfoOnly.IsPresent) {
+            
+            $SubResult = "" | Select-Object -Property EffectiveDate, Status, SubService, ExpressRoute, Protocol, Port, Value
+            
+            $SubResults = New-Object System.Collections.ArrayList
+            
+            $QuickDescription = 'Information - read description'
+            
+            $SubResult.Value = 'N/A'
+            
+            #Add Value to allow expand 'SubChanges' field
+            $SubResults.Add($SubResult) | Out-Null
+            
+            $DescriptionIsParsable = $true
+            
+            $QuickDescriptionPart0 = 'InfoONly'
+            
+            Remove-Variable -Name SubResult | Out-Null
+            
+            
+        }
         
         #Workaround for guid: afd6018e-f810-45df-b303-bfd5029fe710 - colon except semicolon used to separate the first block
         #Replace the first colon
-        If ($Description.IndexOf(';') -eq -1 ){
-            
-            $CommaIndex = $Description.IndexOf(',')
-            
-            $Description = "{0};{1}" -f $Description.Substring(0, ($CommaIndex - 1)), $($Description.Substring($CommaIndex + 1,$($Description.Length - $CommaIndex)-1))
+        Else {
+            If ($Description.IndexOf(';') -eq -1) {
                 
-        }
+                $CommaIndex = $Description.IndexOf(',')
+                
+                $Description = "{0};{1}" -f $Description.Substring(0, ($CommaIndex - 1)), $($Description.Substring($CommaIndex + 1, $($Description.Length - $CommaIndex) - 1))
+                
+            }
             
             $DescriptionSplittedParts = $Description.Split(';')
-        
-        #Workaround for gudi: e6018ef9-105d-4fb3-83bf-d5029fe7106e 
-        #Join parts if was splitted due to a semicolon in the last field (probably in 'Notes')
-        if ($Description.IndexOf(';') -ne $Description.LastIndexOf(';')) {
             
-            #Enter-
+            #Workaround for gudi: e6018ef9-105d-4fb3-83bf-d5029fe7106e 
+            #Join parts if was splitted due to a semicolon in the last field (probably in 'Notes')
+            if ($Description.IndexOf(';') -ne $Description.LastIndexOf(';')) {
+                
+                #Enter-
+                
+                $DescriptionSplittedParts[1] = "{0}; {1}" -f $DescriptionSplittedParts[1], $DescriptionSplittedParts[2]
+                
+            }
             
-            $DescriptionSplittedParts[1] = "{0}; {1}" -f $DescriptionSplittedParts[1], $DescriptionSplittedParts[2]
-            
-        }
-        
-        $DescriptionSplittedPartsCount = ($DescriptionSplittedParts | Measure-Object).Count
+            $DescriptionSplittedPartsCount = ($DescriptionSplittedParts | Measure-Object).Count
             
             #Replace end of the line chars
             $QuickDescription = $($DescriptionSplittedParts[0]).Replace("$([char][int]10)", " ")
@@ -452,8 +490,8 @@ Function Parse-O365IPAddressChangesDescription {
             [String]$MessageText = "QuickDescription separated from the Description field: {0}" -f $QuickDescription
             
             Write-Verbose -Message $MessageText
-                        
-            If (@("Adding", "Removing","Updating") -contains $QuickDescriptionPart0) {                
+            
+            If (@("Adding", "Removing", "Updating") -contains $QuickDescriptionPart0) {
                 
                 [String]$MessageText = "Recognized operations in the RSS item {0} is {1} - means Adding or Removing. Description will be parsed to extract SubChanges." -f $Guid, $QuickDescriptionPart0
                 
@@ -490,9 +528,9 @@ Function Parse-O365IPAddressChangesDescription {
                         Break
                         
                     }
-                Else {
-                    
-                    $SubResult = "" | Select-Object -Property EffectiveDate, Status, SubService, ExpressRoute, Protocol, Port, Value
+                    Else {
+                        
+                        $SubResult = "" | Select-Object -Property EffectiveDate, Status, SubService, ExpressRoute, Protocol, Port, Value
                         
                         $SubResults = New-Object System.Collections.ArrayList
                         
@@ -541,7 +579,7 @@ Function Parse-O365IPAddressChangesDescription {
                             
                             $Protocol = 'TCP'
                             
-                            $Port = $($($CurrentOperationSplited[3]).Trim()).Replace('Port: TCP ','')
+                            $Port = $($($CurrentOperationSplited[3]).Trim()).Replace('Port: TCP ', '')
                             
                         }
                         
@@ -553,7 +591,7 @@ Function Parse-O365IPAddressChangesDescription {
                             $Port = $($($CurrentOperationSplited[3]).Trim()).Replace('Port: UDP ', '')
                             
                         }
-                                                
+                        
                         $LastSpaceIndex = $CurrentOperation.LastIndexOf(' ')
                         
                         $Value = $($CurrentOperation.Substring($LastSpaceIndex + 1, $($CurrentOperation.length - $LastSpaceIndex) - 1)).Trim()
@@ -596,7 +634,9 @@ Function Parse-O365IPAddressChangesDescription {
                 }
                 
             }
-        
+            
+            
+            
         <#
     }
     
@@ -631,11 +671,13 @@ Function Parse-O365IPAddressChangesDescription {
     }
     
         #>
-}
-        
-
-
-End {   
+            
+        }
+    }
+    
+    
+    
+    End {
         
         $Result = New-Object -TypeName System.Management.Automation.PSObject
         
