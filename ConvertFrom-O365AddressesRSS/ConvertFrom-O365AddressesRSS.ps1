@@ -1,4 +1,5 @@
-﻿function ConvertFrom-O365AddressesRSS {
+﻿Import-Module Boxstarter.Chocolatey
+function ConvertFrom-O365AddressesRSS {
     <#
     .SYNOPSIS
     Download and convert to custom PowerShell object the RSS channel data about planned changes to Office 365 networks/hosts.
@@ -10,7 +11,13 @@
     
     .PARAMETER Path
     The xml file containing data like O365IPAddresses.xml downloaded manually. 
-    If the the parameter is ommited the file O365IPAddresses.xml will be downloaded from the Microsoft site and saved with
+    If the the parameter is ommited the file O365IPAddresses.xml will be downloaded from the Microsoft site and saved with the name containing the date and time of download.
+    
+    .PARAMETER StartDate
+    The Start parameter specifies the start date and time of the date range. RSS item publication information is returned from to, but not including, the specified date and time.
+    
+    .PARAMETER EndDate
+    The End parameter specifies the end date and time of the date range. RSS item publication information is returned up to, but not including, the specified date and time.
     
     .INPUTS
     None. The xml data published as RSS channel under url https://support.office.com/en-us/o365ip/rss. 
@@ -181,13 +188,12 @@
     - 0.2.1 - 2016-06-21 - Parsing description to SubChanges corrected
     - 0.2.2 - 2016-06-21 - Parsing 'Updating' items added
     - 0.2.3 - 2016-06-21 - Description will be trimmed at the begining of processing, TODO updated
+    - 0.3.0 - 2016-06-23 - Workarounds for inconsistent descriptions added, the parameters Start, End added to limit parse between dates
     
     TODO
     - implement handling cases like 
-      - guid: afd6018e-f810-45df-b303-bfd5029fe710 - colon except semicolon used to separate the first block
       - guid: ef8105df-b303-4bfd-9029-fe7107efa204 - Notes only items
     - implement parameters DownloadRSSOnly, CleanFileAfterParsing
-    - add suport to return/parse RSS items between selected dates only
     - add support for downloading the file via proxy with authentication (?)
     - add parameter to custom naming downloaded file
     - direct output for CSV files (?)
@@ -203,7 +209,12 @@
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $false)]
-        [String]$Path = ".\O365AddressesRSS.xml" #,
+        [String]$Path = ".\O365AddressesRSS.xml",
+        [Parameter(Mandatory=$false)]
+        [DateTime]$Start,
+        [Parameter(Mandatory = $false)]
+        [DateTime]$End
+        #,
         #[Parameter(Mandatory = $false)]
         #[Switch]$DownloadRSSOnly, #Can be handled to output to null
         #[Parameter(Mandatory = $false)]
@@ -212,10 +223,21 @@
     
     BEGIN {
         
+        Import-Module DebugPx -Force -Verbose:$InternalVerbose
+        
         [Bool]$InternalVerbose = $false
         
-        [Bool]$ParameterVerbose = ($PSCmdlet.MyInvocation.BoundParameters["Verbose"].IsPresent)
-        
+        If ($PSCmdlet.MyInvocation.BoundParameters["Verbose"].IsPresent) {
+            
+            $ParameterVerbose = $true
+            
+        }
+        Else {
+            
+            $ParameterVerbose = $false
+            
+        }
+                
         Try {
             
             If (!(Test-Path -Path $Path -PathType Leaf)) {
@@ -276,6 +298,41 @@
             #This can be used to limit parse operation under development
             #if ($i -gt 197 -and $i -lt 203) {
             
+            [datetime]$CurrentItemPubDate = $CurrentItem.pubDate
+            
+            #Check if the StartDate and EndDate parameters are populated
+            If (-not ([String]::IsNullOrEmpty($Start)) -and -not ([String]::IsNullOrEmpty($End))) {
+                
+                If ($CurrentItemPubDate -le $Start -or $CurrentItemPubDate -ge $End) {
+                    
+                    #Skip current RSS item means loop iteration 
+                    continue
+                    
+                }
+                
+            }
+            Elseif ($Start) {
+                
+                If ($CurrentItemPubDate -le $Start) {
+                    
+                    #Skip current RSS item means loop iteration 
+                    continue
+                    
+                }
+                
+            }
+            elseif ($End) {
+                
+                If ($CurrentItemPubDate -ge $End) {
+                    
+                    #Skip current RSS item means loop iteration 
+                    continue
+                    
+                }
+                
+            }
+            
+            
             #Prepoulating properties for the Result object
             
             $Result = "" | Select-Object -Property OperationType, Title, PublicationDate, Guid, Description, DescriptionIsParsable, QuickDescription, Notes, SubChanges
@@ -287,9 +344,7 @@
             $CurrentItemDescription = $($($CurrentItem.Description).Replace("$([char][int]10)", " ")).Trim()
             
             $ParsedDescription = Parse-O365IPAddressChangesDescription -Description $CurrentItemDescription -Guid $CurrentItemGuid -Verbose:$ParameterVerbose
-            
-            [datetime]$CurrentItemPubDate = $CurrentItem.pubDate
-            
+                        
             $CurrentItemTitle = $($($CurrentItem.Title).trim()).Replace("$([char][int]10)", " ")
             
             $Result.Title = $CurrentItemTitle
@@ -332,6 +387,8 @@
     
     END {
         
+        #enter-debugger
+        
         Return $Results
         
     }
@@ -360,15 +417,32 @@ Function Parse-O365IPAddressChangesDescription {
         
         #Import-Module DebugPx -Force
         
-        #Enter-Debugger -ConditionScript { $Guid -match '4bfc5029-fe70-407e-b920-5cfb403afd60' }
-        
+                
         #Try {
+        
+        #Workaround for guid: afd6018e-f810-45df-b303-bfd5029fe710 - colon except semicolon used to separate the first block
+        #Replace the first colon
+        If ($Description.IndexOf(';') -eq -1 ){
+            
+            $CommaIndex = $Description.IndexOf(',')
+            
+            $Description = "{0};{1}" -f $Description.Substring(0, ($CommaIndex - 1)), $($Description.Substring($CommaIndex + 1,$($Description.Length - $CommaIndex)-1))
+                
+        }
             
             $DescriptionSplittedParts = $Description.Split(';')
+        
+        #Workaround for gudi: e6018ef9-105d-4fb3-83bf-d5029fe7106e 
+        #Join parts if was splitted due to a semicolon in the last field (probably in 'Notes')
+        if ($Description.IndexOf(';') -ne $Description.LastIndexOf(';')) {
             
-            $DescriptionSplittedPartsCount = ($DescriptionSplittedParts | Measure-Object).Count
+            #Enter-
             
-            #Add something to catch the semicolons in a Notes part like in 8ef9105d-fb30-43bf-9502-9fe7106efa20
+            $DescriptionSplittedParts[1] = "{0}; {1}" -f $DescriptionSplittedParts[1], $DescriptionSplittedParts[2]
+            
+        }
+        
+        $DescriptionSplittedPartsCount = ($DescriptionSplittedParts | Measure-Object).Count
             
             #Replace end of the line chars
             $QuickDescription = $($DescriptionSplittedParts[0]).Replace("$([char][int]10)", " ")
@@ -523,11 +597,19 @@ Function Parse-O365IPAddressChangesDescription {
                 
             }
         
+        <#
     }
-    <#
+    
     Catch {
+    
+        $SubResult.Value = 'N/A'
+    
+        #Add Value to allow expand 'SubChanges' field
+        $SubResults.Add($SubResult) | Out-Null
         
         $DescriptionIsParsable = $false
+    
+        Remove-Variable -Name SubResult | Out-Null
         
     }
     
@@ -540,7 +622,7 @@ Function Parse-O365IPAddressChangesDescription {
         }
         Else {
             
-            [String]$MessageText = "Subchange {0} from RSS item {1} not parsed successfully." -f $i, $Guid
+            [String]$MessageText = "Subchange {0} from RSS item {1} haven't parsed successfully." -f $i, $Guid
             
         }
         
@@ -548,13 +630,12 @@ Function Parse-O365IPAddressChangesDescription {
         
     }
     
+        #>
 }
-    #>
-    
-
-
-End {
         
+
+
+End {   
         
         $Result = New-Object -TypeName System.Management.Automation.PSObject
         
