@@ -1,4 +1,5 @@
 ﻿
+Import-Module Boxstarter.Chocolatey
 function ConvertFrom-O365AddressesRSS {
     <#
     .SYNOPSIS
@@ -192,6 +193,7 @@ function ConvertFrom-O365AddressesRSS {
     - 0.4.0 - 2016-06-24 - Parsing notes only RSS items added, verbose corrected
     - 0.4.1 - 2016-06-24 - Workarounds for inconsistent descriptions corrected, TODO updated
     - 0.5.0 - 2016-06-26 - Output for non parsable items changed, now is more descriptive
+    - 0.5.1 - 2016-06-26 - Corrected output for subchanges 
     
     TODO
     - Add workaround for cases
@@ -210,7 +212,8 @@ function ConvertFrom-O365AddressesRSS {
 #>
     
     [cmdletbinding()]
-    param (
+    [outputtype([System.Collections.ArrayList])]
+param (
         [Parameter(Mandatory = $false)]
         [String]$Path = ".\O365AddressesRSS.xml",
         [Parameter(Mandatory = $false)]
@@ -225,8 +228,8 @@ function ConvertFrom-O365AddressesRSS {
     )
     
     BEGIN {
-        
-        Import-Module DebugPx -Force -Verbose:$InternalVerbose
+            
+        #Import-Module DebugPx -Force -Verbose:$InternalVerbose
         
         [Bool]$InternalVerbose = $false
         
@@ -341,11 +344,8 @@ function ConvertFrom-O365AddressesRSS {
             $Result = "" | Select-Object -Property OperationType, Title, PublicationDate, Guid, Description, DescriptionIsParsable, QuickDescription, Notes, SubChanges
             
             $CurrentItemGuid = $CurrentItem.guid
-            
-            $DescriptionParsable = $false
-            
-            $CurrentItemDescription = $($($CurrentItem.Description).Replace("$([char][int]10)", " ")).Trim()
-            
+                        
+            $CurrentItemDescription = $($($CurrentItem.Description).Replace("$([char][int]10)", " ")).Trim()            
             
             #Workaround to handle ' &amp;' - e.g. guid: 029fe710-7ef9-4205-8fb4-03afd6018ff8
             
@@ -487,9 +487,7 @@ Function Parse-O365IPAddressChangesDescription {
                     $DescriptionSplittedParts[1] = "{0}; {1}" -f $DescriptionSplittedParts[1], $DescriptionSplittedParts[2]
                     
                 }
-                
-                $DescriptionSplittedPartsCount = ($DescriptionSplittedParts | Measure-Object).Count
-                
+                                
                 #Replace end of the line chars
                 $QuickDescription = $($DescriptionSplittedParts[0]).Replace("$([char][int]10)", " ")
                 
@@ -509,6 +507,8 @@ Function Parse-O365IPAddressChangesDescription {
                     $Operations = $($($($($Description.Split(';'))[1]).trim()).Replace("$([char][int]10)", " ")).Split(',')
                     
                     $OperationsCount = ($Operations | Measure-Object).Count
+                    
+                    $SubResults = New-Object System.Collections.ArrayList
                     
                     For ($i = 0; $i -lt $OperationsCount; $i++) {
                         
@@ -550,8 +550,6 @@ Function Parse-O365IPAddressChangesDescription {
                         Else {
                             
                             $SubResult = "" | Select-Object -Property EffectiveDate, Status, SubService, ExpressRoute, Protocol, Port, Value
-                            
-                            $SubResults = New-Object System.Collections.ArrayList
                             
                             #Clean data from data outside brackets
                             $CurrentOperation = $CurrentOperation.Substring($OpenBracket + 1, ($CloseBracket - $OpenBracket) - 1)
@@ -710,6 +708,8 @@ Function Parse-O365IPAddressChangesDescription {
         $Result | Add-Member -MemberType NoteProperty -Name OperationType -Value $QuickDescriptionPart0
         
         $Result | Add-Member -MemberType NoteProperty -Name Notes -Value $Notes
+        
+        $SubResults. GetEnumerator()| Write-Host
         
         $Result | Add-Member -MemberType NoteProperty -Name SubChanges -Value $SubResults
         
