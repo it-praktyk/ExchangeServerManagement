@@ -1,4 +1,4 @@
-﻿Import-Module Boxstarter.Chocolatey
+﻿
 function ConvertFrom-O365AddressesRSS {
     <#
     .SYNOPSIS
@@ -190,7 +190,8 @@ function ConvertFrom-O365AddressesRSS {
     - 0.2.3 - 2016-06-21 - Description will be trimmed at the begining of processing, TODO updated
     - 0.3.0 - 2016-06-23 - Workarounds for inconsistent descriptions added, the parameters Start, End added to limit parse between dates
     - 0.4.0 - 2016-06-24 - Parsing notes only RSS items added, verbose corrected
-    - 0.4.1 - 2016-06-24 - Workarounds for inconsistent descriptions corrected
+    - 0.4.1 - 2016-06-24 - Workarounds for inconsistent descriptions corrected, TODO updated
+    - 0.5.0 - 2016-06-26 - Output for non parsable items changed, now is more descriptive
     
     TODO
     - Add workaround for cases
@@ -345,6 +346,11 @@ function ConvertFrom-O365AddressesRSS {
             
             $CurrentItemDescription = $($($CurrentItem.Description).Replace("$([char][int]10)", " ")).Trim()
             
+            
+            #Workaround to handle ' &amp;' - e.g. guid: 029fe710-7ef9-4205-8fb4-03afd6018ff8
+            
+            $CurrentItemDescription = $CurrentItemDescription.Replace(' &amp; ', ' and ')
+            
             If ($CurrentItemDescription.Substring(0, 5) -eq 'Note:' -or $CurrentItemDescription.Substring(0, 6) -eq 'Notes:') {
                 
                 $ParsedDescription = Parse-O365IPAddressChangesDescription -Description $CurrentItemDescription -Guid $CurrentItemGuid -InfoOnly -Verbose:$ParameterVerbose
@@ -366,18 +372,19 @@ function ConvertFrom-O365AddressesRSS {
             
             $Result.Description = $CurrentItemDescription
             
-            If ($ParsedDescription.DescriptionIsParsable) {
-                
-                $Result.OperationType = $ParsedDescription.OperationType
-                
-                $Result.DescriptionIsParsable = $ParsedDescription.DescriptionIsParsable
-                
-                $Result.QuickDescription = $ParsedDescription.QuickChangeDescription
-                
-                $Result.Notes = $ParsedDescription.Notes
-                
-                $Result.SubChanges = $ParsedDescription.SubChanges
-                
+            #If ($ParsedDescription.DescriptionIsParsable) {
+            
+            $Result.OperationType = $ParsedDescription.OperationType
+            
+            $Result.DescriptionIsParsable = $ParsedDescription.DescriptionIsParsable
+            
+            $Result.QuickDescription = $ParsedDescription.QuickChangeDescription
+            
+            $Result.Notes = $ParsedDescription.Notes
+            
+            $Result.SubChanges = $ParsedDescription.SubChanges
+            
+            <#
             }
             Else {
                 
@@ -386,7 +393,7 @@ function ConvertFrom-O365AddressesRSS {
                 $Result.SubChanges = $ParsedDescription.SubChanges
                 
             }
-            
+            #>
             
             
             $Results.Add($Result) | Out-Null
@@ -442,12 +449,12 @@ Function Parse-O365IPAddressChangesDescription {
                 
                 $SubResults = New-Object System.Collections.ArrayList
                 
-                $QuickDescription = 'Information - read description'
-                
                 $SubResult.Value = 'N/A'
                 
                 #Add Value to allow expand 'SubChanges' field
                 $SubResults.Add($SubResult) | Out-Null
+                
+                $QuickDescription = 'Information - read description'
                 
                 $DescriptionIsParsable = $true
                 
@@ -647,16 +654,28 @@ Function Parse-O365IPAddressChangesDescription {
                     
                 }
                 
-                
-                
-                
             }
             
         }
-        
         Catch {
             
+            $DescriptionIsParsable = $false
+            
+        }
+        
+        
+        
+        If (-not $DescriptionIsParsable) {
+            
+            Remove-Variable -Name SubResult -ErrorAction SilentlyContinue
+            
+            Remove-Variable -Name Subresults -ErrorAction SilentlyContinue
+            
             $SubResult = "" | Select-Object -Property EffectiveDate, Status, SubService, ExpressRoute, Protocol, Port, Value
+            
+            $QuickDescriptionPart0 = 'Unknown'
+            
+            $QuickDescription = 'Unknown - read description'
             
             $SubResults = New-Object System.Collections.ArrayList
             
@@ -665,47 +684,37 @@ Function Parse-O365IPAddressChangesDescription {
             #Add Value to allow expand 'SubChanges' field
             $SubResults.Add($SubResult) | Out-Null
             
-            $DescriptionIsParsable = $false
-            
             Remove-Variable -Name SubResult | Out-Null
+            
+            [String]$MessageText = "Subchange {0} from RSS item {1} haven't parsed successfully." -f $i, $Guid
+            
+        }
+        Else {
+            
+            [String]$MessageText = "All subchanges from RSS item {0} have parsed successfully." -f $Guid
             
         }
         
-        Finally {
-            
-            If ($DescriptionIsParsable) {
-                
-                [String]$MessageText = "All subchanges from RSS item {0} have parsed successfully." -f $Guid
-                
-            }
-            Else {
-                
-                [String]$MessageText = "Subchange {0} from RSS item {1} haven't parsed successfully." -f $i, $Guid
-                
-            }
-            
-            Write-Verbose -Message $MessageText
-            
-        }
+        Write-Verbose -Message $MessageText
         
     }
     
     End {
-                
-                $Result = New-Object -TypeName System.Management.Automation.PSObject
-                
-                $Result | Add-Member -MemberType NoteProperty -Name DescriptionIsParsable -Value $DescriptionIsParsable
-                
-                $Result | Add-Member -MemberType NoteProperty -Name QuickChangeDescription -Value $QuickDescription
-                
-                $Result | Add-Member -MemberType NoteProperty -Name OperationType -Value $QuickDescriptionPart0
-                
-                $Result | Add-Member -MemberType NoteProperty -Name Notes -Value $Notes
-                
-                $Result | Add-Member -MemberType NoteProperty -Name SubChanges -Value $SubResults
-                
-                Return $Result
-                
-            }
-            
-        }
+        
+        $Result = New-Object -TypeName System.Management.Automation.PSObject
+        
+        $Result | Add-Member -MemberType NoteProperty -Name DescriptionIsParsable -Value $DescriptionIsParsable
+        
+        $Result | Add-Member -MemberType NoteProperty -Name QuickChangeDescription -Value $QuickDescription
+        
+        $Result | Add-Member -MemberType NoteProperty -Name OperationType -Value $QuickDescriptionPart0
+        
+        $Result | Add-Member -MemberType NoteProperty -Name Notes -Value $Notes
+        
+        $Result | Add-Member -MemberType NoteProperty -Name SubChanges -Value $SubResults
+        
+        Return $Result
+        
+    }
+    
+}
