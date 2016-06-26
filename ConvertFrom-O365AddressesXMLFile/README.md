@@ -2,9 +2,12 @@
 ## SYNOPSIS
 Download and convert the O365IPAddresses.xml file to the custom PowerShell object
 
+
 ## SYNTAX
 ```powershell
-ConvertFrom-O365AddressesXMLFile [[-Path] <String>] [<CommonParameters>]
+ConvertFrom-O365AddressesXMLFile [-Path <String>] [-RemoveFileAfterParsing] [<CommonParameters>]
+
+ConvertFrom-O365AddressesXMLFile [-DownloadRSSOnly] [-PassThru] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -26,6 +29,37 @@ Accept pipeline input?       false
 Accept wildcard characters?  false
 ```
 
+### -RemoveFileAfterParsing &lt;SwitchParameter&gt;
+Remove file used to parsing after returning results.
+```
+Required?                    false
+Position?                    named
+Default value                False
+Accept pipeline input?       false
+Accept wildcard characters?  false
+```
+
+### -DownloadRSSOnly &lt;SwitchParameter&gt;
+Select if only O365IPAddresses.xml content need to be downloaded and stored to disk.
+```
+Required?                    false
+Position?                    named
+Default value                False
+Accept pipeline input?       false
+Accept wildcard characters?  false
+```
+
+### -PassThru &lt;SwitchParameter&gt;
+Returns an object representing the file containing O365IPAddresses-yyyyMMdd-HHmmss.xml file.
+```
+Required?                    false
+Position?                    named
+Default value                False
+Accept pipeline input?       false
+Accept wildcard characters?  false
+```
+
+
 ## INPUT
 The xml file published by Microsoft what contains the list of IP addresses ranges used by Office 365 addresses.
 
@@ -43,10 +77,12 @@ VERSIONS HISTORY
 - 0.1.2 - 2016-02-23 - The output spelling corrected for SubNetMaskLength, help update, the function reformatted
 - 0.1.3 - 2016-02-23 - Small correction of code in an example
 - 0.1.4 - 2016-02-24 - Dates for versions 0.1.1 - 0.1.3 corrected, alliases for some cmdlets expanded to full names
-- 0.2.0 - 2016-06-17 - Support for handling download errors added, help updated, the main repository renamed 
+- 0.2.0 - 2016-06-17 - Support for handling download errors added, help updated, the main repository renamed
 - 0.3.0 - 2016-06-17 - The function name changed from ConvertFrom-O365IPAddressesXMLFile to ConvertFrom-O365AddressesXMLFile
 - 0.3.1 - 2016-06-18 - The code reformatted, TODO updated
 - 0.3.2 - 2016-06-18 - Help updated
+- 0.4.0 - 2016-06-26 - The parameters DownloadRSSOnly,PassThru,RemoveFileAfterParsing added, the parameters sets added, TODO updated, help updated
+- 0.4.1 - 2016-06-26 - Information about required PowerShell version added, help updated
 
 TODO
 

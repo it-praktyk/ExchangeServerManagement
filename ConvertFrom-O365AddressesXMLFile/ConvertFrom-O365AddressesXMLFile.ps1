@@ -1,5 +1,4 @@
 ﻿function ConvertFrom-O365AddressesXMLFile {
-    
     <#
     .SYNOPSIS
     Download and convert the O365IPAddresses.xml file to the custom PowerShell object.
@@ -102,6 +101,7 @@
 	- 0.3.1 - 2016-06-18 - The script reformatted, TODO updated
 	- 0.3.2 - 2016-06-19 - The help corrected
     - 0.4.0 - 2016-06-26 - The parameters DownloadRSSOnly,PassThru,RemoveFileAfterParsing added, the parameters sets added, TODO updated, help updated
+    - 0.4.1 - 2016-06-26 - Information about required PowerShell version added, help updated
 
     TODO
     - add only summary mode/switch - display info a last modification date, and sums IPs/URLs for products
@@ -110,7 +110,7 @@
       #https://dscottraynsford.wordpress.com/2016/06/24/allow-powershell-to-traverse-a-secure-proxy/
     - add parameter to custom naming downloaded file (?)
       #https://github.com/it-praktyk/New-OutputObject
-    - implement downloadable overwrites for non-parsable RSS items (?)
+    - add support for PowerShell 2.0 - Invoke-WebRequest need to be replaced
     
         
     LICENSE
@@ -119,6 +119,9 @@
     Full license text: https://opensource.org/licenses/MIT
    
 #>
+    
+    #The cmdlet Invoke-WebRequest is used
+    #Requires -Version 3.0
     
     [cmdletbinding(DefaultParameterSetName = 'Parse')]
     [outputtype(ParameterSetName = 'Parse', [System.Collections.ArrayList])]
@@ -265,6 +268,7 @@
                             [String]$Url = $null
                             
                         }
+                        
                     }
                     
                     elseif (-not ($O365ServicesCurrentAddress.contains("/")) -and $CurrentListType -eq "IPv4") {
