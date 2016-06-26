@@ -2,16 +2,16 @@
 function ConvertFrom-O365AddressesRSS {
     <#
     .SYNOPSIS
-    Download and convert to custom PowerShell object the RSS channel data about planned changes to Office 365 networks/hosts.
+    Download and convert to custom PowerShell object the RSS channel  data about planned changes to Office 365 networks/hosts.
     
     .DESCRIPTION
-    Function intended for downloading and converting to the custom PowerShell object the list of changes published by Microsoft as RSS items.
+    Function intended for downloading and converting to the custom PowerShell object the list of changes published by Microsoft as RSS items https://support.office.com/en-us/o365ip/rss.
     
     More information on the Microsoft support page: "Office 365 URLs and IP address ranges", http://bit.ly/1LD8fYv
     
     .PARAMETER Path
-    The xml file containing data like O365IPAddresses.xml downloaded manually. 
-    If the parameter is omitted the file O365IPAddresses.xml will be downloaded from the Microsoft site and saved in current location with the name containing the date and time of download.
+    The xml file containing RSS data downloaded manually. 
+    If the parameter is omitted the RSS data content will be downloaded from the Microsoft site and saved in current location with the name containing the date and time of download.
     
     .PARAMETER StartDate
     The Start parameter specifies the start date and time of the date range. RSS item publication information is returned from to, but not including, the specified date and time.
@@ -200,7 +200,8 @@ function ConvertFrom-O365AddressesRSS {
     - 0.4.1 - 2016-06-24 - Workarounds for inconsistent descriptions corrected, TODO updated
     - 0.5.0 - 2016-06-26 - Output for non parsable items changed, now is more descriptive
     - 0.5.1 - 2016-06-26 - Corrected output for subchanges 
-    - 0.6.0 - 2016-06-26 - The parameters DownloadRSSOnly,PassThru,RemoveFileAfterParsing added, the parameters set added, TODO updated, help updated
+    - 0.6.0 - 2016-06-26 - The parameters DownloadRSSOnly,PassThru,RemoveFileAfterParsing added, the parameters sets added, TODO updated, help updated
+    - 0.6.1 - 2016-06-26 - The default value for the parameter Path removed, help corrected
     
     TODO
     - add support for downloading the file via proxy with authentication (?)
@@ -222,7 +223,7 @@ function ConvertFrom-O365AddressesRSS {
     [outputtype(ParameterSetName = 'Download', [System.IO.FileInfo])]
     param (
         [Parameter(Mandatory = $false, ParameterSetName = 'Parse')]
-        [String]$Path = ".\O365AddressesRSS.xml",
+        [String]$Path,
         [Parameter(Mandatory = $false, ParameterSetName = 'Parse')]
         [DateTime]$Start,
         [Parameter(Mandatory = $false, ParameterSetName = 'Parse')]
@@ -252,7 +253,7 @@ function ConvertFrom-O365AddressesRSS {
         
         Try {
             
-            If (-not (Test-Path -Path $Path -Type Leaf)) {
+            If ( [String]::IsNullOrEmpty($Path)) {
                 
                 # If not provided file then download file from the internet
                 

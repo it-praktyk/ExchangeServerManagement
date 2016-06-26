@@ -18,12 +18,12 @@ More information on the Microsoft support page: "Office 365 URLs and IP address 
 
 ## PARAMETERS
 ### -Path &lt;String&gt;
-The xml file containing data like O365IPAddresses.xml downloaded manually.
-If the the parameter is omitted the file O365IPAddresses.xml will be downloaded from the Microsoft site and saved in current location with the name containing the date and time of download.
+The xml file containing RSS data downloaded manually.
+If the parameter is omitted the RSS data content will be downloaded from the Microsoft site and saved in current location with the name containing the date and time of download.
 ```
 Required?                    false
 Position?                    named
-Default value                .\O365AddressesRSS.xml
+Default value                
 Accept pipeline input?       false
 Accept wildcard characters?  false
 ```
@@ -102,6 +102,7 @@ VERSIONS HISTORY
 - 0.5.0 - 2016-06-26 - Output for non parsable items changed, now is more descriptive
 - 0.5.1 - 2016-06-26 - Corrected output for subchanges
 - 0.6.0 - 2016-06-26 - The parameters DownloadRSSOnly,PassThru,RemoveFileAfterParsing added, the parameters set added, TODO updated, help updated
+- 0.6.1 - 2016-06-26 - The default value for the parameter Path removed, help corrected
 
 
 TODO
@@ -141,21 +142,20 @@ Full license text: https://opensource.org/licenses/MIT
 	Guid                  : 8ef9105d-fb30-43bf-9502-9fe7106efa20
 	Description           : Adding 1 New IP_Sets; 1/[Effective 6/13/2016. Required: Office Online. ExpressRoute: Yes.
 	                        13.94.209.165]. Notes: Infrastructure change for a small component of Office Online, minimal
-	                        (if any) customer impact; additionally, this endpoint wonĂ˘â'¬â"˘t be available via
-	                        ExpressRoute until 8/1/2016.
+	                        (if any) customer impact; additionally, this endpoint won˘t be available via ExpressRoute until 8/1/2016.
 	DescriptionIsParsable : True
 	QuickDescription      : Adding 1 New IP_Sets
 	Notes                 :
 	SubChanges            : {@{EffectiveDate=6/13/2016 12:00:00 AM; Required=Office Online; ExpressRoute=True;
 	                        Value=13.94.209.165}}
 
-	Automatically parsed RSS items, general view without expanding SubChanges
+	Automatically parsed RSS items, general view without expanding SubChanges.
 ```
 
 
 ### EXAMPLE 2
 ```powershell
-[PS] >ConvertFrom-O365AddressesRSS -Path .\O365AddressesRSS.xml | get-member
+[PS] >ConvertFrom-O365AddressesRSS -Path .\O365AddressesRSS.xml | Get-Member
 
 	TypeName: Selected.System.String
 
