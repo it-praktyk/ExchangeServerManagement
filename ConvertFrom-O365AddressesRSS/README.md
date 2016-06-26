@@ -12,9 +12,9 @@ ConvertFrom-O365AddressesRSS [-DownloadRSSOnly] [-PassThru] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
-Function intended for converting to the custom PowerShell object the list of changes published by Microsoft as RSS items.
+Function intended for downloading and converting to the custom PowerShell object the list of changes to Office 365 networks and hosts published by Microsoft as a RSS channel https://support.office.com/en-us/o365ip/rss.
 
-More information on the Microsoft support page: "Office 365 URLs and IP address ranges", http://bit.ly/1LD8fYv
+More information on the Microsoft support page: "Office 365 URLs and IP address ranges", http://bit.ly/1LD8fYv .
 
 ## PARAMETERS
 ### -Path &lt;String&gt;
@@ -103,6 +103,7 @@ VERSIONS HISTORY
 - 0.5.1 - 2016-06-26 - Corrected output for subchanges
 - 0.6.0 - 2016-06-26 - The parameters DownloadRSSOnly,PassThru,RemoveFileAfterParsing added, the parameters set added, TODO updated, help updated
 - 0.6.1 - 2016-06-26 - The default value for the parameter Path removed, help corrected
+- 0.6.2 - 2016-06-02 - Help updated, code cleaned
 
 
 TODO
@@ -111,6 +112,7 @@ TODO
 - add parameter to custom naming downloaded file  
   #https://github.com/it-praktyk/New-OutputObject
 - implement downloadable overwrites for non-parsable RSS items (?)
+- add support for PowerShell 2.0 - Invoke-WebRequest need to be replaced
 
 LICENSE  
 Copyright (c) 2016 Wojciech Sciesinski  
@@ -149,6 +151,8 @@ Full license text: https://opensource.org/licenses/MIT
 	SubChanges            : {@{EffectiveDate=6/13/2016 12:00:00 AM; Required=Office Online; ExpressRoute=True;
 	                        Value=13.94.209.165}}
 
+	<Output partially omitted>
+
 	Automatically parsed RSS items, general view without expanding SubChanges.
 ```
 
@@ -174,58 +178,96 @@ Full license text: https://opensource.org/licenses/MIT
 	QuickDescription      NoteProperty object QuickDescription=null
 	SubChanges            NoteProperty object SubChanges=null
 	Title                 NoteProperty string Title=Office Online
+
+
+    Output for the RSS item what is not parsable
 ```
 
 ### EXAMPLE 3
 
 ```powershell
+[PS] >ConvertFrom-O365AddressesRSS -Path .\O365AddressesRSS.xml | get-member
 
-ConvertFrom-O365AddressesRSS | Select-Object -Property Guid -ExpandProperty SubChanges
+       TypeName: Selected.System.String
 
-	<Output partially omitted>
+    Name                  MemberType   Definition
+    ----                  ----------   ----------
+    Equals                Method       bool Equals(System.Object obj)
+    GetHashCode           Method       int GetHashCode()
+    GetType               Method       type GetType()
+    ToString              Method       string ToString()
+    Description           NoteProperty string Description=Adding 1 New IP_Sets; 1/[Effective 7/1/2016. Required: Exchang...
+    DescriptionIsParsable NoteProperty bool DescriptionIsParsable=True
+    Guid                  NoteProperty string Guid=029fe710-7ef9-4205-8fb4-03afd6018ef8
+    Notes                 NoteProperty string Notes=adding consolidated range.
+    OperationType         NoteProperty string OperationType=Adding
+    PublicationDate       NoteProperty datetime PublicationDate=6/1/2016 12:22:56 PM
+    QuickDescription      NoteProperty string QuickDescription=Adding 1 New IP_Sets
+    SubChanges            NoteProperty System.Collections.ArrayList SubChanges=
+    Title                 NoteProperty string Title=Exchange Online Protection
 
-	EffectiveDate : 3/29/2016 12:00:00 AM
-	Status        : Required
-	SubService    : Exchange Online
-	ExpressRoute  : False
-	Protocol      : TCP
-	Port          : 443
-	Value         : 191.232.96.0/19
-	Guid          : 4bfc5029-fe70-407e-b920-5cfb403afd60
 
-	EffectiveDate : 2/29/2016 12:00:00 AM
-	Status        : Optional
-	SubService    : Microsoft Azure Active Directory (MFA)
-	ExpressRoute  : False
-	Protocol      : TCP
-	Port          : 443
-	Value         : secure.aadcdn.microsoftonline-p.com
-	Guid          : 105dfb30-3bfd-4502-9fe7-107efa204cfc
-
-	<Output partially omitted>
+    Output for the RSS item what is parsable
 
 ```
 
 ### EXAMPLE 4
 ```powershell
-[PS] > ConvertFrom-O365AddressesRSS -Start 6/21/2016 | Select -Property Guid -ExpandProperty SubChanges | Get-Member
+[PS] >ConvertFrom-O365AddressesRSS -Start 5/31/2016 -End 6/2/2016 | Select-Object -Property PublicationDate,Description,Guid -ExpandProperty Subchanges
 
-   TypeName: Selected.System.Management.Automation.PSCustomObject
+    <Output partially omitted>
 
-    Name          MemberType   Definition
-    ----          ----------   ----------
-    Equals        Method       bool Equals(System.Object obj)
-    GetHashCode   Method       int GetHashCode()
-    GetType       Method       type GetType()
-    ToString      Method       string ToString()
-    EffectiveDate NoteProperty datetime EffectiveDate=8/1/2016 12:00:00 AM
-    ExpressRoute  NoteProperty bool ExpressRoute=True
-    Guid          NoteProperty string Guid=dfa204cf-c402-4afe-a017-ef9205dfb303
-    Port          NoteProperty object Port=null
-    Protocol      NoteProperty object Protocol=null
-    Status        NoteProperty string Status=Required
-    SubService    NoteProperty string SubService=Skype for Business Online
-    Value         NoteProperty string Value=207.46.57.0/25
+    EffectiveDate   : 7/1/2016 12:00:00 AM
+    Status          : Required
+    SubService      : Yammer
+    ExpressRoute    : False
+    Protocol        :
+    Port            :
+    Value           : 13.107.6.158/31
+    PublicationDate : 6/1/2016 12:22:50 PM
+    Description     : Adding 2 New IP_Sets; 1/[Effective 7/1/2016. Required: Yammer. ExpressRoute: No. 13.107.6.158/31],
+                      2/[Effective 7/1/2016. Required: Yammer. ExpressRoute: No. 13.107.9.158/31]. Notes: adding
+                      consolidated range.
+    Guid            : 17ef9105-dfb3-403b-bd50-19fe8106efa2
 
-    Custom PowerShell object returned for subchanges, Output data for the RSS item what was parsed successfully.
+    EffectiveDate   : 7/1/2016 12:00:00 AM
+    Status          : Required
+    SubService      : Yammer
+    ExpressRoute    : False
+    Protocol        :
+    Port            :
+    Value           : 13.107.9.158/31
+    PublicationDate : 6/1/2016 12:22:50 PM
+    Description     : Adding 2 New IP_Sets; 1/[Effective 7/1/2016. Required: Yammer. ExpressRoute: No. 13.107.6.158/31],
+                      2/[Effective 7/1/2016. Required: Yammer. ExpressRoute: No. 13.107.9.158/31]. Notes: adding
+                      consolidated range.
+    Guid            : 17ef9105-dfb3-403b-bd50-19fe8106efa2
+
+    EffectiveDate   : 7/1/2016 12:00:00 AM
+    Status          : Required
+    SubService      : Exchange Online Protection
+    ExpressRoute    : True
+    Protocol        :
+    Port            :
+    Value           : 157.56.111.0/24
+    PublicationDate : 6/1/2016 12:22:53 PM
+    Description     : Removing 1 Old IP_Sets; 1/[Effective 7/1/2016. Required: Exchange Online Protection. ExpressRoute:
+                      YES. 157.56.111.0/24]. Notes: removing range to support consolidation.
+    Guid            : 106dfa30-4bfc-4502-9fe7-017ef9205cfb
+
+    EffectiveDate   : 7/1/2016 12:00:00 AM
+    Status          : Required
+    SubService      : Exchange Online Protection
+    ExpressRoute    : True
+    Protocol        :
+    Port            :
+    Value           : 216.32.180.0/23
+    PublicationDate : 6/1/2016 12:22:56 PM
+    Description     : Adding 1 New IP_Sets; 1/[Effective 7/1/2016. Required: Exchange Online Protection. ExpressRoute:
+                      YES. 216.32.180.0/23]. Notes: adding consolidated range.
+    Guid            : 029fe710-7ef9-4205-8fb4-03afd6018ef8
+
+
+    Automatically parsed RSS items with details about planned subchanges.
+
 ```

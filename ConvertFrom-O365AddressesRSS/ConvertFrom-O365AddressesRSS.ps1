@@ -1,11 +1,10 @@
-﻿
-function ConvertFrom-O365AddressesRSS {
+﻿function ConvertFrom-O365AddressesRSS {
     <#
     .SYNOPSIS
-    Download and convert to custom PowerShell object the RSS channel  data about planned changes to Office 365 networks/hosts.
+    Download and convert to custom PowerShell object the RSS channel data about planned changes to Office 365 networks/hosts.
     
     .DESCRIPTION
-    Function intended for downloading and converting to the custom PowerShell object the list of changes published by Microsoft as RSS items https://support.office.com/en-us/o365ip/rss.
+    Function intended for downloading and converting to the custom PowerShell object the list of changes to Office 365 networks and hosts published by Microsoft as a RSS channel https://support.office.com/en-us/o365ip/rss.
     
     More information on the Microsoft support page: "Office 365 URLs and IP address ranges", http://bit.ly/1LD8fYv
     
@@ -59,13 +58,15 @@ function ConvertFrom-O365AddressesRSS {
     Guid                  : 8ef9105d-fb30-43bf-9502-9fe7106efa20
     Description           : Adding 1 New IP_Sets; 1/[Effective 6/13/2016. Required: Office Online. ExpressRoute: Yes.
                             13.94.209.165]. Notes: Infrastructure change for a small component of Office Online, minimal
-                            (if any) customer impact; additionally, this endpoint wonĂ˘â'¬â"˘t be available via
+                            (if any) customer impact; additionally, this endpoint won't be available via
                             ExpressRoute until 8/1/2016.
     DescriptionIsParsable : True
     QuickDescription      : Adding 1 New IP_Sets
     Notes                 :
     SubChanges            : {@{EffectiveDate=6/13/2016 12:00:00 AM; Required=Office Online; ExpressRoute=True;
                             Value=13.94.209.165}}
+    
+    <Output partially omitted>
     
     Automatically parsed RSS items, general view without expanding SubChanges    
     
@@ -91,9 +92,10 @@ function ConvertFrom-O365AddressesRSS {
     SubChanges            NoteProperty object SubChanges=null
     Title                 NoteProperty string Title=Office Online
 
-    .EXAMPLE
     
     Output for the RSS item what is not parsable
+    
+    .EXAMPLE
     
     [PS] > ConvertFrom-O365AddressesRSS -Path .\O365AddressesRSS.xml | get-member
 
@@ -115,44 +117,67 @@ function ConvertFrom-O365AddressesRSS {
     SubChanges            NoteProperty System.Collections.ArrayList SubChanges=
     Title                 NoteProperty string Title=Exchange Online Protection
 
+    
     Output for the RSS item what is parsable
     
     .EXAMPLE
     
-    [PS] > ConvertFrom-O365AddressesRSS | Select-Object -Property Guid,OperationType,PublicationDate,Title -ExpandProperty SubChanges
+    [PS] > ConvertFrom-O365AddressesRSS -Start 5/31/2016 -End 6/2/2016 | Select-Object -Property PublicationDate,Description,Guid -ExpandProperty Subchanges
     
     <Output partially omitted>
     
     EffectiveDate   : 7/1/2016 12:00:00 AM
-    Required        : Exchange Online Protection
+    Status          : Required
+    SubService      : Yammer
+    ExpressRoute    : False
+    Protocol        :
+    Port            :
+    Value           : 13.107.6.158/31
+    PublicationDate : 6/1/2016 12:22:50 PM
+    Description     : Adding 2 New IP_Sets; 1/[Effective 7/1/2016. Required: Yammer. ExpressRoute: No. 13.107.6.158/31],
+                      2/[Effective 7/1/2016. Required: Yammer. ExpressRoute: No. 13.107.9.158/31]. Notes: adding
+                      consolidated range.
+    Guid            : 17ef9105-dfb3-403b-bd50-19fe8106efa2
+
+    EffectiveDate   : 7/1/2016 12:00:00 AM
+    Status          : Required
+    SubService      : Yammer
+    ExpressRoute    : False
+    Protocol        :
+    Port            :
+    Value           : 13.107.9.158/31
+    PublicationDate : 6/1/2016 12:22:50 PM
+    Description     : Adding 2 New IP_Sets; 1/[Effective 7/1/2016. Required: Yammer. ExpressRoute: No. 13.107.6.158/31],
+                      2/[Effective 7/1/2016. Required: Yammer. ExpressRoute: No. 13.107.9.158/31]. Notes: adding
+                      consolidated range.
+    Guid            : 17ef9105-dfb3-403b-bd50-19fe8106efa2
+
+    EffectiveDate   : 7/1/2016 12:00:00 AM
+    Status          : Required
+    SubService      : Exchange Online Protection
     ExpressRoute    : True
+    Protocol        :
+    Port            :
+    Value           : 157.56.111.0/24
+    PublicationDate : 6/1/2016 12:22:53 PM
+    Description     : Removing 1 Old IP_Sets; 1/[Effective 7/1/2016. Required: Exchange Online Protection. ExpressRoute:
+                      YES. 157.56.111.0/24]. Notes: removing range to support consolidation.
+    Guid            : 106dfa30-4bfc-4502-9fe7-017ef9205cfb
+
+    EffectiveDate   : 7/1/2016 12:00:00 AM
+    Status          : Required
+    SubService      : Exchange Online Protection
+    ExpressRoute    : True
+    Protocol        :
+    Port            :
     Value           : 216.32.180.0/23
-    Guid            : 029fe710-7ef9-4205-8fb4-03afd6018ef8
-    OperationType   : Adding
     PublicationDate : 6/1/2016 12:22:56 PM
-    Title           : Exchange Online Protection
-
-    EffectiveDate   : 8/1/2016 12:00:00 AM
-    Required        : Office 365 Authentication and identity
-    ExpressRoute    : True
-    Value           : 2a01:111:2005:6::/64
-    Guid            : 29fe7107-ef92-404c-bc40-3afd6018ef81
-    OperationType   : Adding
-    PublicationDate : 6/13/2016 3:06:37 PM
-    Title           : Authentication and Identity
-
-    EffectiveDate   : 8/1/2016 12:00:00 AM
-    Required        : Exchange Online Protection
-    ExpressRoute    : True
-    Value           : 207.46.101.128/26
-    Guid            : ef9205cf-b403-4afd-a018-fe8106dfa304
-    OperationType   : Removing
-    PublicationDate : 6/13/2016 3:06:39 PM
-    Title           : Exchange Online Protection
+    Description     : Adding 1 New IP_Sets; 1/[Effective 7/1/2016. Required: Exchange Online Protection. ExpressRoute:
+                      YES. 216.32.180.0/23]. Notes: adding consolidated range.
+    Guid            : 029fe710-7ef9-4205-8fb4-03afd6018ef8
     
-    <Output partially omitted>
     
-    Automatically parsed RSS items with details about planned changes.
+    Automatically parsed RSS items with details about planned subchanges.
     
     .EXAMPLE
     
@@ -175,7 +200,8 @@ function ConvertFrom-O365AddressesRSS {
     SubService    NoteProperty string SubService=Skype for Business Online
     Value         NoteProperty string Value=207.46.57.0/25
     
-    Custom PowerShell object returned for subchanges, Output data for the RSS item what was parsed successfully.
+    
+    Custom PowerShell object returned for subchanges, Output data for the RSS items what was parsed successfully.
     
     .LINK
     https://github.com/it-praktyk/Convert-Office365NetworksData
@@ -202,6 +228,7 @@ function ConvertFrom-O365AddressesRSS {
     - 0.5.1 - 2016-06-26 - Corrected output for subchanges 
     - 0.6.0 - 2016-06-26 - The parameters DownloadRSSOnly,PassThru,RemoveFileAfterParsing added, the parameters sets added, TODO updated, help updated
     - 0.6.1 - 2016-06-26 - The default value for the parameter Path removed, help corrected
+    - 0.6.2 - 2016-06-02 - Help updated, code cleaned
     
     TODO
     - add support for downloading the file via proxy with authentication (?)
@@ -209,6 +236,7 @@ function ConvertFrom-O365AddressesRSS {
     - add parameter to custom naming downloaded file (?)
       #https://github.com/it-praktyk/New-OutputObject
     - implement downloadable overwrites for non-parsable RSS items (?)
+    - add support for PowerShell 2.0 - Invoke-WebRequest need to be replaced
     
         
     LICENSE
@@ -217,6 +245,9 @@ function ConvertFrom-O365AddressesRSS {
     Full license text: https://opensource.org/licenses/MIT
    
 #>
+    
+    #The cmdlet Invoke-WebRequest is used
+    #Requires -Version 3.0
     
     [cmdletbinding(DefaultParameterSetName='Parse')]
     [outputtype(ParameterSetName = 'Parse', [System.Collections.ArrayList])]
@@ -394,8 +425,6 @@ function ConvertFrom-O365AddressesRSS {
             
             $Result.Description = $CurrentItemDescription
             
-            #If ($ParsedDescription.DescriptionIsParsable) {
-            
             $Result.OperationType = $ParsedDescription.OperationType
             
             $Result.DescriptionIsParsable = $ParsedDescription.DescriptionIsParsable
@@ -406,25 +435,11 @@ function ConvertFrom-O365AddressesRSS {
             
             $Result.SubChanges = $ParsedDescription.SubChanges
             
-            <#
-            }
-            Else {
-                
-                $Result.DescriptionIsParsable = $ParsedDescription.DescriptionIsParsable
-                
-                $Result.SubChanges = $ParsedDescription.SubChanges
-                
-            }
-            #>
-            
-            
             $Results.Add($Result) | Out-Null
             
         }
         
         $i++
-        
-        #}
         
     }
     
