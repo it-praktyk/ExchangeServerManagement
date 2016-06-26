@@ -13,10 +13,19 @@
     
     .PARAMETER Path
     The xml file containing data like O365IPAddresses.xml downloaded manually. 
-    If the the parameter is ommited the file O365IPAddresses.xml will be downloaded from the Microsoft site and saved with
+    If the the parameter is omitted the file O365IPAddresses.xml will be downloaded from the Microsoft site and saved in current location with the name containing the date and time of download.
+    
+    .PARAMETER RemoveFileAfterParsing
+    Remove file used to parsing after returning results.
+    
+    .PARAMETER DownloadRSSOnly
+    Select if only O365IPAddresses.xml content need to be downloaded and stored to disk.
+    
+    .PARAMETER PassThru
+    Returns an object representing the file containing O365IPAddresses-yyyyMMdd-HHmmss.xml file.
     
     .INPUTS
-    None. The xml file published by Microsoft what contains the list of IP addresses ranges used by Office 365 addresses. 
+    None. The xml file published by Microsoft what contains the list of IP addresses ranges and names used by Office 365 services. 
     
     .OUTPUTS
     None. The custom PowerShell object what contains properties: Service,Type,IPAddress,SubNetMaskLength,SubnetMask,Url
@@ -92,13 +101,17 @@
     - 0.3.0 - 2016-06-17 - The function name changed from ConvertFrom-O365IPAddressesXMLFile to ConvertFrom-O365AddressesXMLFile
 	- 0.3.1 - 2016-06-18 - The script reformatted, TODO updated
 	- 0.3.2 - 2016-06-19 - The help corrected
+    - 0.4.0 - 2016-06-26 - The parameters DownloadRSSOnly,PassThru,RemoveFileAfterParsing added, the parameters sets added, TODO updated, help updated
 
     TODO
     - add only summary mode/switch - display info a last modification date, and sums IPs/URLs for products
+    - check/correct verbose and debug mode
     - add support for downloading the file via proxy with authentication (?)
-    - add parameter to custom naming downloaded file
-    - add parameter to clean downloaded file
-	- check/correct verbose and debug mode
+      #https://dscottraynsford.wordpress.com/2016/06/24/allow-powershell-to-traverse-a-secure-proxy/
+    - add parameter to custom naming downloaded file (?)
+      #https://github.com/it-praktyk/New-OutputObject
+    - implement downloadable overwrites for non-parsable RSS items (?)
+    
         
     LICENSE
     Copyright (c) 2016 Wojciech Sciesinski
@@ -107,10 +120,18 @@
    
 #>
     
-    [cmdletbinding()]
+    [cmdletbinding(DefaultParameterSetName = 'Parse')]
+    [outputtype(ParameterSetName = 'Parse', [System.Collections.ArrayList])]
+    [outputtype(ParameterSetName = 'Download', [System.IO.FileInfo])]
     param (
-        [Parameter(Mandatory = $false)]
-        [String]$Path = ".\O365IPAddresses.xml"
+        [Parameter(Mandatory = $false, ParameterSetName = 'Parse')]
+        [String]$Path = ".\O365IPAddresses.xml",
+        [Parameter(Mandatory = $false, ParameterSetName = 'Parse')]
+        [Switch]$RemoveFileAfterParsing,
+        [Parameter(Mandatory = $false, ParameterSetName = 'Download')]
+        [Switch]$DownloadRSSOnly,
+        [Parameter(Mandatory = $false, ParameterSetName = 'Download')]
+        [switch]$PassThru
     )
     
     BEGIN {
@@ -125,20 +146,26 @@
                 
                 [String]$OutputFileName = "O365IPAddresses-{0}.xml" -f (Get-Date -f "yyyyMMdd-HHmmss")
                 
-                Invoke-WebRequest -uri $UrlToDownload -OutFile ".\$OutputFileName"
+                Invoke-WebRequest -uri $UrlToDownload -OutFile ".\$OutputFileName" | Out-Null
                 
-                [XML]$CurrentO365AddressesFile = Get-Content -Path ".\$OutputFileName"
+                [System.IO.FileInfo]$FileToProcess = Get-Item -Path $OutputFileName
                 
-                [String]$MessageText = "The data from {0} content downloaded and stored as a file {1}." -f $UrlToDownload, $OutputFileName
+                [String]$MessageText = "The data from {0} content downloaded and stored as a file {1}." -f $UrlToDownload, $FileToProcess.FullName
                 
                 Write-Verbose -Message $MessageText
                 
             }
             Else {
                 
-                [XML]$CurrentO365AddressesFile = Get-Content -Path $Path
+                [System.IO.FileInfo]$FileToProcess = Get-Item -Path $Path
+                
+                [String]$MessageText = "The file {0} found and will be processed." -f $FileToProcess.FullName
+                
+                Write-Verbose -Message $MessageText
                 
             }
+            
+            [XML]$CurrentO365AddressesFile = Get-Content -Path $FileToProcess.FullName
             
             $Results = @()
             
@@ -151,6 +178,21 @@
     }
     
     PROCESS {
+        
+        If ($DownloadRSSOnly.IsPresent) {
+            
+            If ($PassThru.IsPresent) {
+                
+                Return $FileToProcess
+                
+            }
+            Else {
+                
+                break
+                
+            }
+            
+        }
         
         $O365Services = $CurrentO365AddressesFile.products.product
         
@@ -296,6 +338,13 @@
     }
     
     END {
+        
+        
+        If ($RemoveFileAfterParsing.IsPresent) {
+            
+            Remove-Item  -Path $FileToProcess -errorAction Continue
+            
+        }
         
         Return $Results
         
