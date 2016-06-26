@@ -1,18 +1,17 @@
 ﻿
-Import-Module Boxstarter.Chocolatey
 function ConvertFrom-O365AddressesRSS {
     <#
     .SYNOPSIS
     Download and convert to custom PowerShell object the RSS channel data about planned changes to Office 365 networks/hosts.
     
     .DESCRIPTION
-    Function intended for converting to the custom PowerShell object the list of changes published by Microsoft as RSS items.
+    Function intended for downloading and converting to the custom PowerShell object the list of changes published by Microsoft as RSS items.
     
     More information on the Microsoft support page: "Office 365 URLs and IP address ranges", http://bit.ly/1LD8fYv
     
     .PARAMETER Path
     The xml file containing data like O365IPAddresses.xml downloaded manually. 
-    If the the parameter is ommited the file O365IPAddresses.xml will be downloaded from the Microsoft site and saved with the name containing the date and time of download.
+    If the parameter is omitted the file O365IPAddresses.xml will be downloaded from the Microsoft site and saved in current location with the name containing the date and time of download.
     
     .PARAMETER StartDate
     The Start parameter specifies the start date and time of the date range. RSS item publication information is returned from to, but not including, the specified date and time.
@@ -20,11 +19,22 @@ function ConvertFrom-O365AddressesRSS {
     .PARAMETER EndDate
     The End parameter specifies the end date and time of the date range. RSS item publication information is returned up to, but not including, the specified date and time.
     
+    .PARAMETER RemoveFileAfterParsing
+    Remove file used to parsing after all operations.
+    
+    .PARAMETER DownloadRSSOnly
+    Select if only RSS content need to be downloaded and stored to disk.
+    
+    .PARAMETER PassThru
+    Returns an object representing the file containing RSS content data.
+    
     .INPUTS
     None. The xml data published as RSS channel under url https://support.office.com/en-us/o365ip/rss. 
     
     .OUTPUTS
-    None. The custom PowerShell object what contains properties: OperationType, Title, PublicationDate, Guid, Description, DescriptionIsParsable, QuickDescription, Notes, SubChanges. The Subchanges property is array of objects (so can be expanded) to object what contains properties:  EffectiveDate, Required, ExpressRoute, Value.
+    None. The custom PowerShell object what contains properties: OperationType, Title, PublicationDate, Guid, Description, DescriptionIsParsable, QuickDescription, Notes, SubChanges. 
+    The Subchanges property is array of objects (so can be expanded) to object what contains properties: EffectiveDate, Required, ExpressRoute, Value.
+    If the parameter DownloadRSSOnly is used the file containing downloaded RSS data is returned.
     
     .EXAMPLE
     [PS] > ConvertFrom-O365AddressesRSS
@@ -57,8 +67,7 @@ function ConvertFrom-O365AddressesRSS {
     SubChanges            : {@{EffectiveDate=6/13/2016 12:00:00 AM; Required=Office Online; ExpressRoute=True;
                             Value=13.94.209.165}}
     
-    Automatically parsed RSS items, general view without expanding SubChanges
-    
+    Automatically parsed RSS items, general view without expanding SubChanges    
     
     .EXAMPLE
     
@@ -147,29 +156,26 @@ function ConvertFrom-O365AddressesRSS {
     
     .EXAMPLE
     
-    ConvertFrom-O365AddressesRSS | Select-Object -Property Guid -ExpandProperty SubChanges
+    [PS] > ConvertFrom-O365AddressesRSS -Start 6/21/2016 | Select -Property Guid -ExpandProperty SubChanges | Get-Member
 
-    <Output partially omitted>
+   TypeName: Selected.System.Management.Automation.PSCustomObject
 
-    EffectiveDate : 3/29/2016 12:00:00 AM
-    Status        : Required
-    SubService    : Exchange Online
-    ExpressRoute  : False
-    Protocol      : TCP
-    Port          : 443
-    Value         : 191.232.96.0/19
-    Guid          : 4bfc5029-fe70-407e-b920-5cfb403afd60
-
-    EffectiveDate : 2/29/2016 12:00:00 AM
-    Status        : Optional
-    SubService    : Microsoft Azure Active Directory (MFA)
-    ExpressRoute  : False
-    Protocol      : TCP
-    Port          : 443
-    Value         : secure.aadcdn.microsoftonline-p.com
-    Guid          : 105dfb30-3bfd-4502-9fe7-107efa204cfc
+    Name          MemberType   Definition
+    ----          ----------   ----------
+    Equals        Method       bool Equals(System.Object obj)
+    GetHashCode   Method       int GetHashCode()
+    GetType       Method       type GetType()
+    ToString      Method       string ToString()
+    EffectiveDate NoteProperty datetime EffectiveDate=8/1/2016 12:00:00 AM
+    ExpressRoute  NoteProperty bool ExpressRoute=True
+    Guid          NoteProperty string Guid=dfa204cf-c402-4afe-a017-ef9205dfb303
+    Port          NoteProperty object Port=null
+    Protocol      NoteProperty object Protocol=null
+    Status        NoteProperty string Status=Required
+    SubService    NoteProperty string SubService=Skype for Business Online
+    Value         NoteProperty string Value=207.46.57.0/25
     
-    <Output partially omitted>
+    Custom PowerShell object returned for subchanges, Output data for the RSS item what was parsed successfully.
     
     .LINK
     https://github.com/it-praktyk/Convert-Office365NetworksData
@@ -194,14 +200,14 @@ function ConvertFrom-O365AddressesRSS {
     - 0.4.1 - 2016-06-24 - Workarounds for inconsistent descriptions corrected, TODO updated
     - 0.5.0 - 2016-06-26 - Output for non parsable items changed, now is more descriptive
     - 0.5.1 - 2016-06-26 - Corrected output for subchanges 
+    - 0.6.0 - 2016-06-26 - The parameters DownloadRSSOnly,PassThru,RemoveFileAfterParsing added, the parameters set added, TODO updated, help updated
     
     TODO
-    - Add workaround for cases
-        -guid: 9205cfc4-03af-4d60-98ef-8106dfa304bf - more than one IP address in subchange, delimited by comma
-    - implement parameters DownloadRSSOnly, CleanFileAfterParsing
     - add support for downloading the file via proxy with authentication (?)
-    - add parameter to custom naming downloaded file
-    - direct output for CSV files (?)
+      #https://dscottraynsford.wordpress.com/2016/06/24/allow-powershell-to-traverse-a-secure-proxy/
+    - add parameter to custom naming downloaded file (?)
+      #https://github.com/it-praktyk/New-OutputObject
+    - implement downloadable overwrites for non-parsable RSS items (?)
     
         
     LICENSE
@@ -211,25 +217,25 @@ function ConvertFrom-O365AddressesRSS {
    
 #>
     
-    [cmdletbinding()]
-    [outputtype([System.Collections.ArrayList])]
-param (
-        [Parameter(Mandatory = $false)]
+    [cmdletbinding(DefaultParameterSetName='Parse')]
+    [outputtype(ParameterSetName = 'Parse', [System.Collections.ArrayList])]
+    [outputtype(ParameterSetName = 'Download', [System.IO.FileInfo])]
+    param (
+        [Parameter(Mandatory = $false, ParameterSetName = 'Parse')]
         [String]$Path = ".\O365AddressesRSS.xml",
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, ParameterSetName = 'Parse')]
         [DateTime]$Start,
-        [Parameter(Mandatory = $false)]
-        [DateTime]$End
-        #,
-        #[Parameter(Mandatory = $false)]
-        #[Switch]$DownloadRSSOnly, #Can be handled to output to null
-        #[Parameter(Mandatory = $false)]
-        #[Switch]$CleanFileAfterParsing 
+        [Parameter(Mandatory = $false, ParameterSetName = 'Parse')]
+        [DateTime]$End,
+        [Parameter(Mandatory = $false, ParameterSetName = 'Parse')]
+        [Switch]$RemoveFileAfterParsing,
+        [Parameter(Mandatory = $false, ParameterSetName = 'Download')]
+        [Switch]$DownloadRSSOnly,
+        [Parameter(Mandatory = $false, ParameterSetName = 'Download')]
+        [switch]$PassThru
     )
     
     BEGIN {
-            
-        #Import-Module DebugPx -Force -Verbose:$InternalVerbose
         
         [Bool]$InternalVerbose = $false
         
@@ -246,7 +252,7 @@ param (
         
         Try {
             
-            If (!(Test-Path -Path $Path -PathType Leaf)) {
+            If (-not (Test-Path -Path $Path -Type Leaf)) {
                 
                 # If not provided file then download file from the internet
                 
@@ -254,27 +260,27 @@ param (
                 
                 [String]$OutputFileName = ".\O365IPAddressesChanges-{0}.xml" -f (Get-Date -Format "yyyyMMdd-HHmmss")
                 
-                Invoke-WebRequest -uri $UrlToDownload -OutFile ".\$OutputFileName" -Verbose:$InternalVerbose
+                Invoke-WebRequest -uri $UrlToDownload -OutFile ".\$OutputFileName" -Verbose:$InternalVerbose | Out-Null
                 
-                [String]$MessageText = "The RSS {0} content downloaded and stored as a file {1}" -f $UrlToDownload, $OutputFileName
+                [System.IO.FileInfo]$FileToProcess = Get-Item -Path $OutputFileName
                 
-                [String]$FileToProcess = $OutputFileName
+                [String]$MessageText = "The RSS {0} content downloaded and stored as a file {1}." -f $UrlToDownload, $FileToProcess.FullName
                 
                 Write-Verbose -Message $MessageText
                 
             }
             Else {
                 
-                [String]$MessageText = "The file {0} found and will be processed" -f $Path
+                [System.IO.FileInfo]$FileToProcess = Get-Item -Path $Path
+                
+                [String]$MessageText = "The file {0} found and will be processed." -f $FileToProcess.FullName
                 
                 Write-Verbose -Message $MessageText
-                
-                $FileToProcess = $Path
                 
             }
             
             #Assigning RSS file content to variable
-            [XML]$CurrentO365AddressesChanges = Get-Content -Path $FileToProcess
+            [XML]$CurrentO365AddressesChanges = Get-Content -Path $FileToProcess.FullName -Encoding UTF8
             
             $Results = New-Object System.Collections.ArrayList
             
@@ -288,6 +294,21 @@ param (
     }
     
     PROCESS {
+        
+        If ($DownloadRSSOnly.IsPresent) {
+            
+            If ($PassThru.IsPresent) {
+                
+                Return $FileToProcess
+                
+            }
+            Else {
+                
+                break
+                
+            }
+            
+        }
         
         $RSSItem = $CurrentO365AddressesChanges.rss.channel
         
@@ -344,8 +365,8 @@ param (
             $Result = "" | Select-Object -Property OperationType, Title, PublicationDate, Guid, Description, DescriptionIsParsable, QuickDescription, Notes, SubChanges
             
             $CurrentItemGuid = $CurrentItem.guid
-                        
-            $CurrentItemDescription = $($($CurrentItem.Description).Replace("$([char][int]10)", " ")).Trim()            
+            
+            $CurrentItemDescription = $($($CurrentItem.Description).Replace("$([char][int]10)", " ")).Trim()
             
             #Workaround to handle ' &amp;' - e.g. guid: 029fe710-7ef9-4205-8fb4-03afd6018ff8
             
@@ -408,7 +429,11 @@ param (
     
     END {
         
-        #enter-debugger
+        If ($RemoveFileAfterParsing.IsPresent) {
+            
+            Remove-Item $FileToProcess -errorAction Continue
+            
+        }
         
         Return $Results
         
@@ -438,9 +463,6 @@ Function Parse-O365IPAddressChangesDescription {
     
     Process {
         
-        #Import-Module DebugPx -Force
-        
-        
         Try {
             
             If ($InfoOnly.IsPresent) {
@@ -461,7 +483,6 @@ Function Parse-O365IPAddressChangesDescription {
                 $QuickDescriptionPart0 = 'InfoONly'
                 
                 Remove-Variable -Name SubResult | Out-Null
-                
                 
             }
             
@@ -487,7 +508,7 @@ Function Parse-O365IPAddressChangesDescription {
                     $DescriptionSplittedParts[1] = "{0}; {1}" -f $DescriptionSplittedParts[1], $DescriptionSplittedParts[2]
                     
                 }
-                                
+                
                 #Replace end of the line chars
                 $QuickDescription = $($DescriptionSplittedParts[0]).Replace("$([char][int]10)", " ")
                 
@@ -549,6 +570,7 @@ Function Parse-O365IPAddressChangesDescription {
                         }
                         Else {
                             
+                            #Prepoulating properties for the SubResult object
                             $SubResult = "" | Select-Object -Property EffectiveDate, Status, SubService, ExpressRoute, Protocol, Port, Value
                             
                             #Clean data from data outside brackets
@@ -661,8 +683,6 @@ Function Parse-O365IPAddressChangesDescription {
             
         }
         
-        
-        
         If (-not $DescriptionIsParsable) {
             
             Remove-Variable -Name SubResult -ErrorAction SilentlyContinue
@@ -708,8 +728,6 @@ Function Parse-O365IPAddressChangesDescription {
         $Result | Add-Member -MemberType NoteProperty -Name OperationType -Value $QuickDescriptionPart0
         
         $Result | Add-Member -MemberType NoteProperty -Name Notes -Value $Notes
-        
-        $SubResults. GetEnumerator()| Write-Host
         
         $Result | Add-Member -MemberType NoteProperty -Name SubChanges -Value $SubResults
         
