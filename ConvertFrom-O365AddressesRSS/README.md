@@ -19,7 +19,7 @@ More information on the Microsoft support page: "Office 365 URLs and IP address 
 ## PARAMETERS
 ### -Path &lt;String&gt;
 The xml file containing data like O365IPAddresses.xml downloaded manually.
-If the the parameter is ommited the file O365IPAddresses.xml will be downloaded from the Microsoft site and saved in current locaton with the name containing the date and time of download.
+If the the parameter is omitted the file O365IPAddresses.xml will be downloaded from the Microsoft site and saved in current location with the name containing the date and time of download.
 ```
 Required?                    false
 Position?                    named
@@ -80,7 +80,9 @@ Accept wildcard characters?  false
 None. The xml data published as RSS channel under url https://support.office.com/en-us/o365ip/rss.
 
 ## OUTPUTS
-None. The custom PowerShell object what contains properties: OperationType, Title, PublicationDate, Guid, Description, DescriptionIsParsable, QuickDescription, Notes, SubChanges. The Subchanges property is array of objects (so can be expanded) to object what contains properties:  EffectiveDate, Required, ExpressRoute, Value. If the parameter DownloadRSSOnly is used the file containing downloaded RSS data is returned.
+None. The custom PowerShell object what contains properties: OperationType, Title, PublicationDate, Guid, Description, DescriptionIsParsable, QuickDescription, Notes, SubChanges.  
+The Subchanges property is array of objects (so can be expanded) to object what contains properties: EffectiveDate, Required, ExpressRoute, Value.  
+If the parameter DownloadRSSOnly is used the file containing downloaded RSS data is returned.
 
 ## NOTES
 AUTHOR: Wojciech Sciesinski, wojciech[at]sciesinski[dot]net  
@@ -226,43 +228,4 @@ ConvertFrom-O365AddressesRSS | Select-Object -Property Guid -ExpandProperty SubC
     Value         NoteProperty string Value=207.46.57.0/25
 
     Custom PowerShell object returned for subchanges, Output data for the RSS item what was parsed successfully.
-	```
-
-
-### EXAMPLE 4
-```powershell
-[PS] >ConvertFrom-O365AddressesRSS | Select-Object -Property Guid,OperationType,PublicationDate,Title -ExpandProperty SubChanges
-
-<Output partially omitted>
-
-EffectiveDate   : 7/1/2016 12:00:00 AM
-Required        : Exchange Online Protection
-ExpressRoute    : True
-Value           : 216.32.180.0/23
-Guid            : 029fe710-7ef9-4205-8fb4-03afd6018ef8
-OperationType   : Adding
-PublicationDate : 6/1/2016 12:22:56 PM
-Title           : Exchange Online Protection
-
-EffectiveDate   : 8/1/2016 12:00:00 AM
-Required        : Office 365 Authentication and identity
-ExpressRoute    : True
-Value           : 2a01:111:2005:6::/64
-Guid            : 29fe7107-ef92-404c-bc40-3afd6018ef81
-OperationType   : Adding
-PublicationDate : 6/13/2016 3:06:37 PM
-Title           : Authentication and Identity
-
-EffectiveDate   : 8/1/2016 12:00:00 AM
-Required        : Exchange Online Protection
-ExpressRoute    : True
-Value           : 207.46.101.128/26
-Guid            : ef9205cf-b403-4afd-a018-fe8106dfa304
-OperationType   : Removing
-PublicationDate : 6/13/2016 3:06:39 PM
-Title           : Exchange Online Protection
-
-<Output partially omitted>
-
-Automatically parsed RSS items with details about planned changes.
 ```
