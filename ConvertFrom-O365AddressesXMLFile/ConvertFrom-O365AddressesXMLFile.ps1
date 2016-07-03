@@ -17,7 +17,7 @@
     .PARAMETER RemoveFileAfterParsing
     Remove file used to parsing after returning results.
     
-    .PARAMETER DownloadRSSOnly
+    .PARAMETER DownloadXMLOnly
     Select if only O365IPAddresses.xml content need to be downloaded and stored to disk.
     
     .PARAMETER PassThru
@@ -102,6 +102,7 @@
 	- 0.3.2 - 2016-06-19 - The help corrected
     - 0.4.0 - 2016-06-26 - The parameters DownloadRSSOnly,PassThru,RemoveFileAfterParsing added, the parameters sets added, TODO updated, help updated
     - 0.4.1 - 2016-06-26 - Information about required PowerShell version added, help updated
+    - 0.5.0 - 2016-07-03 - The parameter DownloadRSSLOnly corrected to DownloadXMLOnly
 
     TODO
     - add only summary mode/switch - display info a last modification date, and sums IPs/URLs for products
@@ -132,7 +133,7 @@
         [Parameter(Mandatory = $false, ParameterSetName = 'Parse')]
         [Switch]$RemoveFileAfterParsing,
         [Parameter(Mandatory = $false, ParameterSetName = 'Download')]
-        [Switch]$DownloadRSSOnly,
+        [Switch]$DownloadXMLOnly,
         [Parameter(Mandatory = $false, ParameterSetName = 'Download')]
         [switch]$PassThru
     )
@@ -182,7 +183,7 @@
     
     PROCESS {
         
-        If ($DownloadRSSOnly.IsPresent) {
+        If ($DownloadXMLOnly.IsPresent) {
             
             If ($PassThru.IsPresent) {
                 

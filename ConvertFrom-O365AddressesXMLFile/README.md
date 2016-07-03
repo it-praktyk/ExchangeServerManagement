@@ -7,7 +7,7 @@ Download and convert the O365IPAddresses.xml file to the custom PowerShell objec
 ```powershell
 ConvertFrom-O365AddressesXMLFile [-Path <String>] [-RemoveFileAfterParsing] [<CommonParameters>]
 
-ConvertFrom-O365AddressesXMLFile [-DownloadRSSOnly] [-PassThru] [<CommonParameters>]
+ConvertFrom-O365AddressesXMLFile [-DownloadXMLOnly] [-PassThru] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -39,7 +39,7 @@ Accept pipeline input?       false
 Accept wildcard characters?  false
 ```
 
-### -DownloadRSSOnly &lt;SwitchParameter&gt;
+### -DownloadXMLOnly &lt;SwitchParameter&gt;
 Select if only O365IPAddresses.xml content need to be downloaded and stored to disk.
 ```
 Required?                    false
@@ -83,14 +83,16 @@ VERSIONS HISTORY
 - 0.3.2 - 2016-06-18 - Help updated
 - 0.4.0 - 2016-06-26 - The parameters DownloadRSSOnly,PassThru,RemoveFileAfterParsing added, the parameters sets added, TODO updated, help updated
 - 0.4.1 - 2016-06-26 - Information about required PowerShell version added, help updated
+- 0.5.0 - 2016-07-03 - The parameter DownloadRSSLOnly corrected to DownloadXMLOnly
 
 TODO
-
 - add only summary mode/switch - display info a last modification date, and sums IPs/URLs for products
-- add support for downloading the file via proxy with authentication (?)
-- add parameter to custom naming downloaded file
-- add parameter to clean downloaded file
 - check/correct verbose and debug mode
+- add support for downloading the file via proxy with authentication (?)
+  #https://dscottraynsford.wordpress.com/2016/06/24/allow-powershell-to-traverse-a-secure-proxy/
+- add parameter to custom naming downloaded file (?)
+  #https://github.com/it-praktyk/New-OutputObject
+- add support for PowerShell 2.0 - Invoke-WebRequest need to be replaced
 
 LICENSE
 
