@@ -1,0 +1,6 @@
+SELECT QUANTIZE(TO_LOCALTIME(TO_TIMESTAMP(EXTRACT_PREFIX(TO_STRING(EXTRACT_SUFFIX([#Fields: date-time],0,'T')),0,'.'), 'hh:mm:ss')),3600) AS Hour,
+    div(Sum(total-bytes),1048576) AS Messages_Size_in_MB,Count(*) AS MessagesCount
+FROM '[LOGFILEPATH]'
+WHERE (event-id='RECEIVE')
+GROUP BY Hour
+ORDER BY Hour ASC 
