@@ -1,0 +1,14 @@
+#ConvertFrom-O365AddressesXMLFile.ps1
+#Download and convert the O365IPAddresses.xml file to the custom PowerShell object
+Get-ChildItem -Path .\
+Import-Module .\ConvertFrom-O365AddressesXMLFile.ps1 -Force
+ConvertFrom-O365AddressesXMLFile
+#The fresh copy of  O365IPAddresses.xml file was downloaded and stored on a disk
+#The file name is based on a download date and time.
+Get-ChildItem -Path .\
+#PowerShell object returned directly to console
+ConvertFrom-O365AddressesXMLFile -Path .\demo\O365IPAddresses-20160618-140721.xml | Get-Member
+#Returned object properties
+Get-ChildItem -Path .\
+#With using the parameter Path in ConvertFrom-O365AddressesXMLFile a fresh copy is not downloaded from Microsoft website
+#Main Repository : https://github.com/it-praktyk/Convert-Office365NetworksData
